@@ -33,11 +33,11 @@ echo 將執行 "iometer_HBA CARD.icf" 及 "HDD Compatibility.icf"
 
 echo.
 echo 正在執行 "iometer_HBA CARD.icf"
-::iomter.exe /c "iometer_HBA CARD.icf"  /r "results_%project_name%_HBA_CARD_%dt%.csv"
+iometer.exe /c "iometer_HBA CARD.icf"  /r "results_%project_name%_HBA_CARD_%dt%.csv"
 
 echo.
 echo 正在執行 "HDD Compatibility.icf" 
-::iomter.exe /c "HDD Compatibility.icf" /r "results_%project_name%_HDD_Comp_%dt%.csv"
+iometer.exe /c "HDD Compatibility.icf" /r "results_%project_name%_HDD_Comp_%dt%.csv"
 
 echo.
 echo 檔名為 "results_%project_name%_HBA_CARD_%dt%.csv"
