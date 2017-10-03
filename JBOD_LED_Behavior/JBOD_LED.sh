@@ -7,6 +7,10 @@
 # sg_map -i | grep AIC
 sg_map -i | grep Edge | awk '{print $1}'| cut -d '/' -f3- > sg_Edge_info.txt
 
+if [$(cat sg_Edge_info.txt) == ""]; then
+sg_map -i | grep AIC | awk '{print $1}'| cut -d '/' -f3- > sg_Edge_info.txt
+fi
+
 # count Edge number
 wc -l < sg_Edge_info.txt > Edge_number.txt
 # echo $(cat Edge_number.txt) e.g 3-Edge in JBOD
