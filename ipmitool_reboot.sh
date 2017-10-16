@@ -1,12 +1,17 @@
 #!/bin/bash
 
 i=0
-while [ "($i)"=="($i)" ]
+while [ 0==0 ]
 do
 
 i=$(($i+1))
 
 echo -e "ipmitool_reboot_&_info Number ($i)"
+
+echo -e "<======== ipmitool sel time get ========>"
+ipmitool -H 192.168.19.212 -U root -P root -I lanplus sel time get
+echo -e "</======= ipmitool sel time get ========>\n"
+sleep 1
 
 echo -e "<======== ipmitool mc info =============>"
 ipmitool -H 192.168.19.212 -U root -P root -I lanplus mc info
@@ -30,11 +35,11 @@ sleep 1
 
 echo -e "<======== ipmitool power reset =========>"
 ipmitool -H 192.168.19.212 -U root -P root -I lanplus power reset
-echo -e "Sleep 180sec"
+echo -e "Sleep 300sec"
 echo -e "</======= ipmitool power reset =========>\n"
 sleep 1
 
 echo -e "ipmitool_reboot_&_info Number ($i)"
-sleep 180
+sleep 300
 
 done
