@@ -1,0 +1,28 @@
+#
+# minicom_script_counters.txt
+# You can use following command.
+# > minicom -S script.txt -C output.txt
+#
+send \n
+
+print "Read counters"
+
+set a 0
+timeout 360000
+
+#goto Main
+
+LOOP:
+    send \n
+    inc a
+    
+#Main:
+    if a > 360000 goto END
+    expect {
+        "cmd >" send counters
+        "Phy Layer Error Counters" sleep 5
+        timeout 60  goto LOOP
+    }
+
+END:
+    exit
