@@ -16,7 +16,11 @@
 #xrandr
 
 # CentOS 7.4 auto login 
-# edit /etc/gdm/custom.conf
+# Edit /etc/gdm/custom.conf
 # [daemon]
 # AutomaticLoginEnable=true
 # AutomaticLogin=username
+
+# CentOS 7.4 grub set timeout
+# Edit /etc/default/grub
+# GRUB_TIMEOUT=5
