@@ -14,3 +14,9 @@
 #xrandr --addmode VGA-1 "1920x1080"
 #xrandr --output VGA-1 --mode "1920x1080"
 #xrandr
+
+# CentOS 7.4 auto login 
+# edit /etc/gdm/custom.conf
+# [daemon]
+# AutomaticLoginEnable=true
+# AutomaticLogin=username
