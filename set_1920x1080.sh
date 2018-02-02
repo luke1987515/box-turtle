@@ -24,3 +24,4 @@
 # CentOS 7.4 grub set timeout
 # Edit /etc/default/grub
 # GRUB_TIMEOUT=5
+# Run grub2-mkconfig -o /boot/grub
