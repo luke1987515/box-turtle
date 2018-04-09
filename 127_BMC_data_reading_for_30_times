@@ -1,0 +1,21 @@
+:: 127 BMC data reading for 30 times
+:: Show mc info (use ipmitool.exe )
+::
+:: 2018-04-09 16:50:55
+
+@echo off
+
+for /l %%x in (1, 1, 30) do (
+    echo %%x
+    echo Show mc info
+    ipmitool.exe -H 192.168.19.83 -U admin -P admin mc info
+
+    :: Sleep 1 sec
+    ping 127.0.0.1 -n 2 > nul
+
+    echo Show SDR
+    ipmitool.exe -H 192.168.19.83 -U admin -P admin sdr
+
+    :: Sleep 1 sec
+    ping 127.0.0.1 -n 2 > nul
+)
