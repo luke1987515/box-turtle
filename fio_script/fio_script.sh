@@ -19,6 +19,9 @@ sed -i '/NAME/d' dev_list.log
 sed -i '/sda/d' dev_list.log
 sed -i '/loop/d' dev_list.log
 sed -i '/sr0/d' dev_list.log
+sed -i '/├/d' dev_list.log
+sed -i '/│/d' dev_list.log
+sed -i '/└/d' dev_list.log
 
 # Generate fio config
 rtime=180
