@@ -26,11 +26,8 @@ set QD_list=1
 set NJ_list=1 2 3 4 5 6 7 8 9 10
 
 for %%b in (%bs_list%) do (
-
     for %%r in (%rw_list%) do (
- 
         for %%q in (%QD_list%) do (
-
             for %%n in (%NJ_list%) do (
 
                 echo [global]        >> %%bK_%%r_QD%%q_NJ%%n.fio
