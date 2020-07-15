@@ -53,7 +53,7 @@ for bs in ${bs_list}; do
                 done
 
                 fio ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio --output-format=terse --output=${bs}K_${rw}_QD${QD}_NJ${NJ}.log
-                cat ${bs}K_${rw}_QD${QD}_NJ${NJ}.log    >> results_%dt%.csv
+                cat ${bs}K_${rw}_QD${QD}_NJ${NJ}.log    >> results_${dt}.csv
                 
             done
         done
