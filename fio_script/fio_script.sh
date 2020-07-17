@@ -26,7 +26,7 @@ sed -i '/└/d' dev_list.log
 # Generate fio config
 rtime=180
 bs_list="4 8 16 32 64 128 256 512"
-rw_list="read write"
+rw_list="randread randwrite"
 # QD_list="1 2 4 8 16 32 64 128 256 512"
 QD_list="1 2 4 8 16 32 64 128 256 512"
 NJ_list="1 2 4 8 16"
@@ -35,7 +35,7 @@ for bs in ${bs_list}; do
     for rw in ${rw_list}; do
         for QD in ${QD_list}; do
             for NJ in ${NJ_list}; do
-             
+
                 echo [global]         >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
                 echo ioengine=psync   >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
                 echo thread           >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
@@ -54,7 +54,7 @@ for bs in ${bs_list}; do
 
                 fio ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio --output-format=terse --output=${bs}K_${rw}_QD${QD}_NJ${NJ}.log
                 cat ${bs}K_${rw}_QD${QD}_NJ${NJ}.log    >> results_${dt}.csv
-                
+
             done
         done
     done
