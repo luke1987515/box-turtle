@@ -16,7 +16,7 @@
 wmic diskdrive get Index > disk_list.tmp
 echo. > disk_list_num.tmp
 for /F "skip=1 tokens=1* delims=" %%A in ('type disk_list.tmp') DO ( 
-    echo %%B  >> disk_list_num.tmp
+    echo %%A  >> disk_list_num.tmp
 )
 
 :: Get bootable Device number
