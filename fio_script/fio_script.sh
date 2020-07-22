@@ -38,24 +38,24 @@ for bs in ${bs_list}; do
         for QD in ${QD_list}; do
             for NJ in ${NJ_list}; do
 
-                echo [global]         >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo ioengine=psync   >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo thread           >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo bs=${bs}         >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo rw=${rw}         >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo iodepth=${QD}    >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo numjobs=${NJ}    >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo time_based       >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo runtime=${rtime} >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo group_reporting  >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
+                echo [global]         >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo ioengine=psync   >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo thread           >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo bs=${bs}         >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo rw=${rw}         >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo iodepth=${QD}    >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo numjobs=${NJ}    >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo time_based       >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo runtime=${rtime} >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                echo group_reporting  >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
                 
                 for device in $(cat dev_list.log); do
-                    echo [${bs}K_${rw}_QD${QD}_NJ${NJ}] >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                    echo filename=/dev/${device}        >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
+                    echo [bs${bs}_${rw}_QD${QD}_NJ${NJ}] >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
+                    echo filename=/dev/${device}        >> bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio
                 done
 
-                fio ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio --output-format=terse --output=${bs}K_${rw}_QD${QD}_NJ${NJ}.log
-                cat ${bs}K_${rw}_QD${QD}_NJ${NJ}.log    >> results_${dt}.csv
+                fio bs${bs}_${rw}_QD${QD}_NJ${NJ}.fio --output-format=terse --output=bs${bs}_${rw}_QD${QD}_NJ${NJ}.log
+                cat bs${bs}_${rw}_QD${QD}_NJ${NJ}.log    >> results_${dt}.csv
 
             done
         done
