@@ -29,7 +29,7 @@ for /F "skip=1 tokens=1* delims=" %%A in ('type boot_disk.tmp') DO (
 :: Remove bootable number from Device list number
 type disk_list_num.tmp > no_boot_disk_num.tmp
 for /F "usebackq" %%A in (boot_disk_num.tmp) do (
-    findstr /v %%A no_boot_disk_num.tmp > no_boot_disk.tmp
+    findstr /v /rc:"^ *%%A *$" no_boot_disk_num.tmp > no_boot_disk.tmp
 	type no_boot_disk.tmp > no_boot_disk_num.tmp
 )
 
