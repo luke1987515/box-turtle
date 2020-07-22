@@ -120,24 +120,24 @@ for %%b in (%bs_list%) do (
         for %%q in (%QD_list%) do (
             for %%n in (%NJ_list%) do (
 
-                echo [global]        >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo ioengine=psync  >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo thread          >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo bs=%%b          >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo rw=%%r          >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo iodepth=%%q     >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo numjobs=%%n     >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo time_based      >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo runtime=%rtime% >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo group_reporting >> %%bK_%%r_QD%%q_NJ%%n.fio
+                echo [global]        >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo ioengine=psync  >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo thread          >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo bs=%%b          >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo rw=%%r          >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo iodepth=%%q     >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo numjobs=%%n     >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo time_based      >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo runtime=%rtime% >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                echo group_reporting >> bs%%b_%%r_QD%%q_NJ%%n.fio
    
                 FOR /F "usebackq" %%i IN (no_boot_disk_num.tmp) DO ( 
-                    echo [%%bK_%%r_QD%%q_NJ%%n]        >> %%bK_%%r_QD%%q_NJ%%n.fio
-                    echo filename=\\.\PHYSICALDRIVE%%i >> %%bK_%%r_QD%%q_NJ%%n.fio
+                    echo [bs%%b_%%r_QD%%q_NJ%%n]        >> bs%%b_%%r_QD%%q_NJ%%n.fio
+                    echo filename=\\.\PHYSICALDRIVE%%i  >> bs%%b_%%r_QD%%q_NJ%%n.fio
                 )
 
-                fio %%bK_%%r_QD%%q_NJ%%n.fio --output-format=terse --output=%%bK_%%r_QD%%q_NJ%%n.log
-                type %%bK_%%r_QD%%q_NJ%%n.log    >> results_%dt%.csv
+                fio bs%%b_%%r_QD%%q_NJ%%n.fio --output-format=terse --output=bs%%b_%%r_QD%%q_NJ%%n.log
+                type bs%%b_%%r_QD%%q_NJ%%n.log    >> results_%dt%.csv
             )
         )
     )
