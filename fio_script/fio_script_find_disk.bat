@@ -13,9 +13,9 @@
 @echo off
 
 :: Get Device list number
-wmic diskdrive get DeviceID > disk_list.tmp
+wmic diskdrive get Index > disk_list.tmp
 echo. > disk_list_num.tmp
-for /F "skip=1 tokens=1,2 delims=E" %%A in ('type disk_list.tmp') DO ( 
+for /F "skip=1 tokens=1* delims=" %%A in ('type disk_list.tmp') DO ( 
     echo %%B  >> disk_list_num.tmp
 )
 
@@ -107,7 +107,8 @@ echo terse_version_3;fio_version;jobname;groupid;error;read_kb;read_bandwidth;re
 
 :: Generate fio config
 set rtime=30
-set bs_list=4 8 16 32 64 128 256 512
+:: set bs_list=1K 2K 4K 8K 16K 32K 64K 128K 256K 512K 1M 2M 4M 8M 16M 32M 64M 128M 256M 512M 1G 2G 4G
+set bs_list=4K 8K 16K 32K 64K 128K 256K 512K
 :: set rw_list=randread randwrite read write
 set rw_list=read write
 :: set QD_list=1 2 4 8 16 32 64 128 256 512
@@ -122,7 +123,7 @@ for %%b in (%bs_list%) do (
                 echo [global]        >> %%bK_%%r_QD%%q_NJ%%n.fio
                 echo ioengine=psync  >> %%bK_%%r_QD%%q_NJ%%n.fio
                 echo thread          >> %%bK_%%r_QD%%q_NJ%%n.fio
-                echo bs=%%bk         >> %%bK_%%r_QD%%q_NJ%%n.fio
+                echo bs=%%b          >> %%bK_%%r_QD%%q_NJ%%n.fio
                 echo rw=%%r          >> %%bK_%%r_QD%%q_NJ%%n.fio
                 echo iodepth=%%q     >> %%bK_%%r_QD%%q_NJ%%n.fio
                 echo numjobs=%%n     >> %%bK_%%r_QD%%q_NJ%%n.fio
