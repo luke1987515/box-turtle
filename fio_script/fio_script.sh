@@ -25,7 +25,9 @@ sed -i '/└/d' dev_list.log
 
 # Generate fio config
 rtime=180
-bs_list="4 8 16 32 64 128 256 512"
+# bs_list="1K 2K 4K 8K 16K 32K 64K 128K 256K 512K 1M 2M 4M 8M 16M 32M 64M 128M 256M 512M 1G 2G 4G"
+bs_list="4K 8K 16K 32K 64K 128K 256K 512K"
+# rw_list="randread randwrite read write"
 rw_list="randread randwrite"
 # QD_list="1 2 4 8 16 32 64 128 256 512"
 QD_list="1 2 4 8 16 32 64 128 256 512"
@@ -39,7 +41,7 @@ for bs in ${bs_list}; do
                 echo [global]         >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
                 echo ioengine=psync   >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
                 echo thread           >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
-                echo bs=${bs}k        >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
+                echo bs=${bs}         >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
                 echo rw=${rw}         >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
                 echo iodepth=${QD}    >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
                 echo numjobs=${NJ}    >> ${bs}K_${rw}_QD${QD}_NJ${NJ}.fio
