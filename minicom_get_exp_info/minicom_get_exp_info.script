@@ -1,0 +1,21 @@
+# minicom -b 38400 -D /dev/ttyS0 -S minicom_get_exp_info.script -C exp_info.log
+
+send ""
+
+expect {
+    " cmd >"
+}
+
+send rev
+
+expect {
+    " cmd >"
+}
+
+send showmfg
+
+expect {
+    " cmd >"
+}
+
+! killall -15 minicom
