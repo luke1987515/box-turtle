@@ -3,21 +3,30 @@
 # Program: Read E1S temperature from BMC sensor information.
 # Author: luke.chen@aicipc.com.tw
 # License: CC0
-# History: 2021-05-20
+# History:
+#   Date: 2021-05-20
 #   Note: First release.
+#   Date: 2021-05-21
+#   Note: Pop up and run script in new window.
+
+
+# Open a new gnome-terminal
+# gnome-terminal --window --geometry=80x24+1840+24 --
 
 # Environmental variables
-IP=192.168.11.11
-UserName=admin
-PassWord=admin
+IP="192.168.11.11"
+UserName="admin"
+PassWord="admin"
 
-Sensor_ID=Temp_PSU1
+Sensor_ID="Temp_PSU1"
 
-TempFileName=temp.log
-ShortFileName=Summary.log
-FullFileName=All_sensor.log
+TempFileName="temp.log"
+ShortFileName="Summary.log"
+FullFileName="All_sensor.log"
 
-SleepTime=5
+SleepTime=2
+
+i=0 # count from 0
 
 # Clear old tmp file
 if [ -f "${TempFileName}" ] ; then
@@ -36,10 +45,7 @@ fi
 
 # Main function
 
-i=0
-# Endless while loop
-while true
-do
+read_E1S_temp() {
   # Title info
   DateTime=$(date '+%Y-%m-%d_%H:%M:%S')
   Title="("${i}") "${DateTime}
@@ -73,4 +79,22 @@ do
 
   # sleep
   sleep ${SleepTime}
-done
+}
+
+endless_loop() {
+  # Endless while loop
+  while true
+  do
+    read_E1S_temp
+  done
+}
+
+# Get xdpinfo form new windows position
+screen_width=$(xdpyinfo | awk '/dimensions/{print $2}' | awk -F "x" '{print $1}')
+screen_height=$(xdpyinfo | awk '/dimensions/{print $2}' | awk -F "x" '{print $2}')
+
+# Show new window
+new_window() { cp $0 $0.tmp; sed -i -e 's/new_window/\#new_window/i' $0.tmp; sed -i -e 's/\#endless_loop/endless_loop/i' $0.tmp;  gnome-terminal --geometry=80x24+$(($screen_width-80)) -- bash -c "$0.tmp"; }
+
+#endless_loop
+new_window
