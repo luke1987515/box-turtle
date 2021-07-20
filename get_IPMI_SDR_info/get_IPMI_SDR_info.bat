@@ -2,7 +2,7 @@
 :: get_IPMI_SDR_info
 :: 
 :: Auther: luke.chen@aicipc.com.tw
-:: Progream: get_IPMI_SDR_info every 10 sec
+:: Progream: get_IPMI_SDR_info every 3 sec
 :: Lincese: CC0
 :: History: 2021-07-20T13:34:04 
 :: note: init
