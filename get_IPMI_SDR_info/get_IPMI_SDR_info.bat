@@ -2,10 +2,14 @@
 :: get_IPMI_SDR_info
 :: 
 :: Auther: luke.chen@aicipc.com.tw
-:: Progream: get_IPMI_SDR_info every 3 sec
+:: Progream: get_IPMI_SDR_info every 10 sec
 :: Lincese: CC0
 :: History: 2021-07-20T13:34:04 
 :: note: init
+:: History: 2021-07-20T16:46:25 
+:: note: Change default to get local IPMI SDR
+:: History: 2021-07-20T17:29:25 
+:: note: Add elist
 
 @ECHO OFF
 
@@ -19,12 +23,18 @@ set dayHM=%day%_%hh%%time:~3,2%
 :: del /Q log_*.txt
 
 :: Set parameter
-set ipaddr=192.168.11.11
-set sleeptime=3
+set ipaddr=localhost
+set remote=-I lanplus -H %ipaddr% -U admin -P admin
+set sleeptime=4
 set /a count=0
 
 :: Get user parameter 
-if not "%1" == "" set ipaddr=%1
+if not "%1" == "" (
+    set ipaddr=%1
+    set remote=-I lanplus -H %1 -U admin -P admin
+) else (
+    set remote=%1
+)
 if not "%2" == "" set sleeptime=%2
 
 :: Set log file name
@@ -55,12 +65,19 @@ echo. > %logname%
     echo. >> %logname%
 
     :: Get BMC SDR 
-    :: echo ipmitool -I lanplus -H %ipaddr% -U admin -P admin sdr
-    ipmitool -I lanplus -H %ipaddr% -U admin -P admin sdr
-    ipmitool -I lanplus -H %ipaddr% -U admin -P admin sdr >> %logname%
- 
-    ::
-    echo.
+    echo --- SDR ---
+    echo --- SDR ---  >> %logname%
+    ipmitool %remote% sdr
+    ipmitool %remote% sdr >> %logname%
+    echo. 
+    echo. >> %logname%
+
+    :: Get BMC SEL elist 
+    echo --- SEL elist ---
+    echo --- SEL elist ---  >> %logname%
+    ipmitool %remote% sel elist
+    ipmitool %remote% sel elist >> %logname%
+    echo. 
     echo. >> %logname%
 
     :: Sleep %sleeptime% sec (default: 3 sec)
