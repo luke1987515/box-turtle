@@ -11,130 +11,145 @@ setlocal EnableDelayedExpansion
 if exist *.icf del /Q *.icf
 if exist *.icf del /Q *.tmp
 
+set ManagerName=ManagerName
+
+:: Get ManagerName
+for /f "usebackq skip=1 tokens=*" %%i in (`wmic computersystem get name ^| findstr /r /v "^$" `) do (
+	    set ManagerName=%%i )
+
+echo ################
+echo Get ManagerName= %ManagerName%
+echo ################
+
+
 echo ################
 echo Careate icf_info.tmp file
 echo ################
 
 :: Careate icf_info_top.tmp
-set filename=icf_info_top
+set TampFileName=icf_info_top
 ::echo ################
-::echo Careate !filename!.tmp 
+::echo Careate !TampFileName!.tmp 
 ::echo ################
 ::echo.
-echo Version 1.1.0                                                                    >> !filename!.tmp
-echo 'TEST SETUP ==================================================================== >> !filename!.tmp
-echo 'Test Description                                                                >> !filename!.tmp
-echo.                                                                                 >> !filename!.tmp
-echo 'Run Time                                                                        >> !filename!.tmp
-echo '	hours      minutes    seconds                                                 >> !filename!.tmp
-echo 	0          10         0                                                       >> !filename!.tmp
-echo 'Ramp Up Time ^(s^)                                                              >> !filename!.tmp
-echo 	300                                                                           >> !filename!.tmp
-echo 'Default Disk Workers to Spawn                                                   >> !filename!.tmp
-echo 	NUMBER_OF_CPUS                                                                >> !filename!.tmp
-echo 'Default Network Workers to Spawn                                                >> !filename!.tmp
-echo 	0                                                                             >> !filename!.tmp
-echo 'Record Results                                                                  >> !filename!.tmp
-echo 	ALL                                                                           >> !filename!.tmp
-echo 'Worker Cycling                                                                  >> !filename!.tmp
-echo '	start      step       step type                                               >> !filename!.tmp
-echo 	1          1          LINEAR                                                  >> !filename!.tmp
-echo 'Disk Cycling                                                                    >> !filename!.tmp
-echo '	start      step       step type                                               >> !filename!.tmp
-echo 	1          1          LINEAR                                                  >> !filename!.tmp
-echo 'Queue Depth Cycling                                                             >> !filename!.tmp
-echo '	start      end        step       step type                                    >> !filename!.tmp
-echo 	1          32         2          EXPONENTIAL                                  >> !filename!.tmp
-echo 'Test Type                                                                       >> !filename!.tmp
-echo 	NORMAL                                                                        >> !filename!.tmp
-echo 'END test setup                                                                  >> !filename!.tmp
-echo 'RESULTS DISPLAY =============================================================== >> !filename!.tmp
-echo 'Record Last Update Results,Update Frequency,Update Type                         >> !filename!.tmp
-echo 	DISABLED,1,WHOLE_TEST                                                         >> !filename!.tmp
-echo 'Bar chart 1 statistic                                                           >> !filename!.tmp
-echo 	Total I/Os per Second                                                         >> !filename!.tmp
-echo 'Bar chart 2 statistic                                                           >> !filename!.tmp
-echo 	Total MBs per Second (Decimal)                                                >> !filename!.tmp
-echo 'Bar chart 3 statistic                                                           >> !filename!.tmp
-echo 	Average I/O Response Time (ms)                                                >> !filename!.tmp
-echo 'Bar chart 4 statistic                                                           >> !filename!.tmp
-echo 	Maximum I/O Response Time (ms)                                                >> !filename!.tmp
-echo 'Bar chart 5 statistic                                                           >> !filename!.tmp
-echo 	%% CPU Utilization (total)                                                    >> !filename!.tmp
-echo 'Bar chart 6 statistic                                                           >> !filename!.tmp
-echo 	Total Error Count                                                             >> !filename!.tmp
-echo 'END results display                                                             >> !filename!.tmp
-echo 'ACCESS SPECIFICATIONS ========================================================= >> !filename!.tmp
-echo 'Access specification name,default assignment                                    >> !filename!.tmp
-echo 	RVI_SAS_disk,NONE                                                             >> !filename!.tmp
-echo 'size,%% of size,%% reads,%% random,delay,burst,align,reply                      >> !filename!.tmp
-echo 	2048,100,0,100,0,1,2048,0                                                     >> !filename!.tmp
-echo 'END access specifications                                                       >> !filename!.tmp
-echo 'MANAGER LIST ================================================================== >> !filename!.tmp
-echo 'Manager ID, manager name                                                        >> !filename!.tmp
-echo 	1,AIC-RVI                                                                     >> !filename!.tmp
-echo 'Manager network address                                                         >> !filename!.tmp
-echo.                                                                                 >> !filename!.tmp
+echo Version 1.1.0 >> !TampFileName!.tmp
+echo 'TEST SETUP ==================================================================== >> !TampFileName!.tmp
+echo 'Test Description >> !TampFileName!.tmp
+echo. >> !TampFileName!.tmp
+echo 'Run Time >> !TampFileName!.tmp
+echo '	hours      minutes    seconds >> !TampFileName!.tmp
+echo 	0          10         0 >> !TampFileName!.tmp
+echo 'Ramp Up Time ^(s^) >> !TampFileName!.tmp
+echo 	300 >> !TampFileName!.tmp
+echo 'Default Disk Workers to Spawn >> !TampFileName!.tmp
+echo 	NUMBER_OF_CPUS >> !TampFileName!.tmp
+echo 'Default Network Workers to Spawn >> !TampFileName!.tmp
+echo 	0 >> !TampFileName!.tmp
+echo 'Record Results >> !TampFileName!.tmp
+echo 	ALL >> !TampFileName!.tmp
+echo 'Worker Cycling >> !TampFileName!.tmp
+echo '	start      step       step type >> !TampFileName!.tmp
+echo 	1          1          LINEAR >> !TampFileName!.tmp
+echo 'Disk Cycling >> !TampFileName!.tmp
+echo '	start      step       step type >> !TampFileName!.tmp
+echo 	1          1          LINEAR >> !TampFileName!.tmp
+echo 'Queue Depth Cycling >> !TampFileName!.tmp
+echo '	start      end        step       step type >> !TampFileName!.tmp
+echo 	1          32         2          EXPONENTIAL >> !TampFileName!.tmp
+echo 'Test Type >> !TampFileName!.tmp
+echo 	NORMAL >> !TampFileName!.tmp
+echo 'END test setup >> !TampFileName!.tmp
+echo 'RESULTS DISPLAY =============================================================== >> !TampFileName!.tmp
+echo 'Record Last Update Results,Update Frequency,Update Type >> !TampFileName!.tmp
+echo 	DISABLED,1,WHOLE_TEST >> !TampFileName!.tmp
+echo 'Bar chart 1 statistic >> !TampFileName!.tmp
+echo 	Total I/Os per Second >> !TampFileName!.tmp
+echo 'Bar chart 2 statistic >> !TampFileName!.tmp
+echo 	Total MBs per Second (Decimal) >> !TampFileName!.tmp
+echo 'Bar chart 3 statistic >> !TampFileName!.tmp
+echo 	Average I/O Response Time (ms) >> !TampFileName!.tmp
+echo 'Bar chart 4 statistic >> !TampFileName!.tmp
+echo 	Maximum I/O Response Time (ms) >> !TampFileName!.tmp
+echo 'Bar chart 5 statistic >> !TampFileName!.tmp
+echo 	%% CPU Utilization (total) >> !TampFileName!.tmp
+echo 'Bar chart 6 statistic >> !TampFileName!.tmp
+echo 	Total Error Count >> !TampFileName!.tmp
+echo 'END results display >> !TampFileName!.tmp
+echo 'ACCESS SPECIFICATIONS ========================================================= >> !TampFileName!.tmp
+echo 'Access specification name,default assignment >> !TampFileName!.tmp
+echo 	RVI_SAS_disk(2K),NONE >> !TampFileName!.tmp
+echo 'size,%% of size,%% reads,%% random,delay,burst,align,reply >> !TampFileName!.tmp
+echo 	2048,100,0,100,0,1,2048,0 >> !TampFileName!.tmp
+echo 'Access specification name,default assignment >> !TampFileName!.tmp
+echo 	RVI_SATA_disk(6K),NONE >> !TampFileName!.tmp
+echo 'size,%% of size,%% reads,%% random,delay,burst,align,reply >> !TampFileName!.tmp
+echo 	6144,100,0,100,0,1,6144,0 >> !TampFileName!.tmp
+echo 'END access specifications >> !TampFileName!.tmp
+echo 'MANAGER LIST ================================================================== >> !TampFileName!.tmp
+echo 'Manager ID, manager name >> !TampFileName!.tmp
+echo 	1, >> !TampFileName!.tmp
+echo 'Manager network address >> !TampFileName!.tmp
+echo. >> !TampFileName!.tmp
 
 
 :: Careate icf_Worker_info_top.tmp
-set filename=icf_Worker_info_top
+set TampFileName=icf_Worker_info_top
 ::echo ################
-::echo Careate !filename!.tmp 
+::echo Careate !TampFileName!.tmp 
 ::echo ################
 ::echo.
-echo 'Worker                                                                          >> !filename!.tmp
-::echo     Worker 1                                                                     >> !filename!.tmp
+echo 'Worker >> !TampFileName!.tmp
+::echo     Worker 1 >> !TampFileName!.tmp
 
 :: Careate icf_Worker_info_mid_top.tmp
-set filename=icf_Worker_info_mid_top
+set TampFileName=icf_Worker_info_mid_top
 ::echo ################
-::echo Careate !filename!.tmp 
+::echo Careate !TampFileName!.tmp 
 ::echo ################
 ::echo.
-echo 'Worker type                                                                     >> !filename!.tmp
-echo 	DISK                                                                          >> !filename!.tmp
-echo 'Default target settings for worker                                              >> !filename!.tmp
-echo 'Number of outstanding IOs,test connection rate,transactions per connection,use fixed seed,fixed seed value >> !filename!.tmp
-::echo 	1,DISABLED,1,DISABLED,0                                                       >> !filename!.tmp
+echo 'Worker type >> !TampFileName!.tmp
+echo 	DISK >> !TampFileName!.tmp
+echo 'Default target settings for worker >> !TampFileName!.tmp
+echo 'Number of outstanding IOs,test connection rate,transactions per connection,use fixed seed,fixed seed value >> !TampFileName!.tmp
+::echo 	1,DISABLED,1,DISABLED,0 >> !TampFileName!.tmp
 
 :: Careate icf_Worker_info_mid_bot.tmp
-set filename=icf_Worker_info_mid_bot
+set TampFileName=icf_Worker_info_mid_bot
 ::echo ################
-::echo Careate !filename!.tmp 
+::echo Careate !TampFileName!.tmp 
 ::echo ################
 ::echo.
-echo 'Disk maximum size,starting sector,Data pattern                                  >> !filename!.tmp
-echo 	0,0,0                                                                         >> !filename!.tmp
-echo 'End default target settings for worker                                          >> !filename!.tmp
-echo 'Assigned access specs                                                           >> !filename!.tmp
-echo 	RVI_SAS_disk                                                                  >> !filename!.tmp
-echo 'End assigned access specs                                                       >> !filename!.tmp
-echo 'Target assignments                                                              >> !filename!.tmp
-echo 'Target                                                                          >> !filename!.tmp
-::echo     1: ""                                                                      >> !filename!.tmp
+echo 'Disk maximum size,starting sector,Data pattern >> !TampFileName!.tmp
+echo 	0,0,0 >> !TampFileName!.tmp
+echo 'End default target settings for worker >> !TampFileName!.tmp
+echo 'Assigned access specs >> !TampFileName!.tmp
+echo 	RVI_SAS_disk(2K) >> !TampFileName!.tmp
+echo 'End assigned access specs >> !TampFileName!.tmp
+echo 'Target assignments >> !TampFileName!.tmp
+echo 'Target >> !TampFileName!.tmp
+::echo     1: "" >> !TampFileName!.tmp
 
 :: Careate icf_Worker_info_bot.tmp
-set filename=icf_Worker_info_bot
+set TampFileName=icf_Worker_info_bot
 ::echo ################
-::echo Careate !filename!.tmp 
+::echo Careate !TampFileName!.tmp 
 ::echo ################
 ::echo.
-echo 'Target type                                                                     >> !filename!.tmp
-echo 	DISK                                                                          >> !filename!.tmp
-echo 'End target                                                                      >> !filename!.tmp
-echo 'End target assignments                                                          >> !filename!.tmp
-echo 'End worker                                                                      >> !filename!.tmp
+echo 'Target type >> !TampFileName!.tmp
+echo 	DISK >> !TampFileName!.tmp
+echo 'End target >> !TampFileName!.tmp
+echo 'End target assignments >> !TampFileName!.tmp
+echo 'End worker >> !TampFileName!.tmp
 
 :: Careate icf_info_bot.tmp
-set filename=icf_info_bot
+set TampFileName=icf_info_bot
 ::echo ################
-::echo Careate !filename!.tmp 
+::echo Careate !TampFileName!.tmp 
 ::echo ################
 ::echo.
-echo 'End manager                                                                     >> !filename!.tmp
-echo 'END manager list                                                                >> !filename!.tmp
-echo Version 1.1.0                                                                    >> !filename!.tmp
+echo 'End manager >> !TampFileName!.tmp
+echo 'END manager list >> !TampFileName!.tmp
+echo Version 1.1.0 >> !TampFileName!.tmp
 
 echo ################
 echo Disk detect...
@@ -148,53 +163,55 @@ echo Start carte many icf file
 echo ################
 echo.
 
-::set DiskNum=4
+::set DiskNum=26
+set FileName=00
 
 for /L %%i in (1, 1, %DiskNum%) do (
     set "formattedValue=000000%%i"
-    echo !formattedValue:~-3!.icf
+	set FileName=!formattedValue:~-2!
+    echo !FileName!.icf
 	:: imput icf_info_top
-	type icf_info_top.tmp                                                                 >> !formattedValue:~-3!.icf
+	type icf_info_top.tmp                               >> !FileName!.icf
 	    :: imput icf_Worker_info_top(outstanding=8)
-	    type icf_Worker_info_top.tmp                                                          >> !formattedValue:~-3!.icf
-        echo     Worker 1                                                                     >> !formattedValue:~-3!.icf
+	    type icf_Worker_info_top.tmp                    >> !FileName!.icf
+        echo     Worker 1 >> !FileName!.icf
 	    :: imput icf_Worker_mid_top	 
-	    type icf_Worker_info_mid_top.tmp                                                      >> !formattedValue:~-3!.icf
-	    echo 	8,DISABLED,1,DISABLED,0                                                       >> !formattedValue:~-3!.icf
+	    type icf_Worker_info_mid_top.tmp                >> !FileName!.icf
+	    echo 	8,DISABLED,1,DISABLED,0 >> !FileName!.icf
 	    :: imput icf_Worker_info_mid_bot
-	    type icf_Worker_info_mid_bot.tmp                                                      >> !formattedValue:~-3!.icf
-	    echo     %%i: ""                                                                      >> !formattedValue:~-3!.icf
+	    type icf_Worker_info_mid_bot.tmp                >> !FileName!.icf
+	    echo     %%i: "">> !FileName!.icf
 	    :: imput icf_Worker_info_bot
-	    type icf_Worker_info_bot.tmp                                                          >> !formattedValue:~-3!.icf
+	    type icf_Worker_info_bot.tmp                    >> !FileName!.icf
 	:: imput Other Worker info(outstanding=1)
 	for /L %%j in (2, 1, %DiskNum%) do (
 	    if %%i==%%j (
 		    :: imput icf_Worker_info_top
-	        type icf_Worker_info_top.tmp                                                      >> !formattedValue:~-3!.icf
-            echo     Worker %%j                                                               >> !formattedValue:~-3!.icf
+	        type icf_Worker_info_top.tmp                >> !FileName!.icf
+            echo     Worker %%j >> !FileName!.icf
 	        :: imput icf_Worker_mid_top	 
-	        type icf_Worker_info_mid_top.tmp                                                  >> !formattedValue:~-3!.icf
-	        echo 	1,DISABLED,1,DISABLED,0                                                   >> !formattedValue:~-3!.icf
+	        type icf_Worker_info_mid_top.tmp            >> !FileName!.icf
+	        echo 	1,DISABLED,1,DISABLED,0 >> !FileName!.icf
 	        :: imput icf_Worker_info_mid_bot
-	        type icf_Worker_info_mid_bot.tmp                                                  >> !formattedValue:~-3!.icf
-	        echo     1: ""                                                                    >> !formattedValue:~-3!.icf
+	        type icf_Worker_info_mid_bot.tmp            >> !FileName!.icf
+	        echo     1: "" >> !FileName!.icf
 		    :: imput icf_Worker_info_bot
-	        type icf_Worker_info_bot.tmp                                                      >> !formattedValue:~-3!.icf
+	        type icf_Worker_info_bot.tmp                >> !FileName!.icf
 	    )else (
 		    :: imput icf_Worker_info_top
-	        type icf_Worker_info_top.tmp                                                      >> !formattedValue:~-3!.icf
-            echo     Worker %%j                                                               >> !formattedValue:~-3!.icf
+	        type icf_Worker_info_top.tmp                >> !FileName!.icf
+            echo     Worker %%j >> !FileName!.icf
 	        :: imput icf_Worker_mid_top	 
-	        type icf_Worker_info_mid_top.tmp                                                  >> !formattedValue:~-3!.icf
-	        echo 	1,DISABLED,1,DISABLED,0                                                   >> !formattedValue:~-3!.icf
+	        type icf_Worker_info_mid_top.tmp            >> !FileName!.icf
+	        echo 	1,DISABLED,1,DISABLED,0 >> !FileName!.icf
 	        :: imput icf_Worker_info_mid_bot
-	        type icf_Worker_info_mid_bot.tmp                                                  >> !formattedValue:~-3!.icf
-	        echo     %%j: ""                                                                  >> !formattedValue:~-3!.icf
+	        type icf_Worker_info_mid_bot.tmp            >> !FileName!.icf
+	        echo     %%j: "" >> !FileName!.icf
 	        :: imput icf_Worker_info_bot
-	        type icf_Worker_info_bot.tmp                                                      >> !formattedValue:~-3!.icf     
+	        type icf_Worker_info_bot.tmp                >> !FileName!.icf     
 	    )
 	)
-	 type icf_info_bot.tmp                                                                >> !formattedValue:~-3!.icf
+	 type icf_info_bot.tmp                              >> !FileName!.icf
 )
 
 echo.
