@@ -9,7 +9,7 @@ echo.
 setlocal EnableDelayedExpansion
 
 if exist *.icf del /Q *.icf
-if exist *.icf del /Q *.tmp
+if exist *.tmp del /Q *.tmp
 
 set ManagerName=ManagerName
 
@@ -220,4 +220,4 @@ echo Complete carte many icf file
 echo ################
 echo.
 
-del /Q *.tmp
+if exist *.tmp del /Q *.tmp
