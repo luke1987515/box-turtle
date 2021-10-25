@@ -21,6 +21,64 @@ echo ################
 echo Get ManagerName= %ManagerName%
 echo ################
 
+echo ################
+echo Get diskdrive get FirmwareRevision, Index, Model
+echo ################
+wmic diskdrive get FirmwareRevision, Index, Model > diskdrive.tmp
+type diskdrive.tmp > diskdrive.txt
+
+for /f "skip=1 tokens=1,2,3,4* " %%i in (diskdrive.txt) do (
+    ::echo %%j %%k %%i
+    set "formattedValue=%%k"
+    ::set ModelName=!formattedValue:~0,20!
+    echo %%j !formattedValue:~0,20! %%i >> disklist.tmp
+)
+
+::type disklist.tmp
+sort disklist.tmp > disksort.tmp
+type disksort.tmp
+
+echo ################
+echo Get os get "SystemDrive"
+echo ################
+
+wmic os get "SystemDrive" > SystemDrive.tmp
+type SystemDrive.tmp > SystemDrive.txt
+
+for /f "skip=1 tokens=1,2,3,4* " %%i in (SystemDrive.txt) do (
+    echo %%i
+    set SystemDrive=%%i
+)
+echo ################
+echo Get os get "SystemDrive"="%SystemDrive%"
+echo ################
+
+echo ################
+echo Get os get "SystemDriveID"
+echo ################
+
+wmic logicaldisk where 'DeviceID="%SystemDrive%"' get Access > SystemDriveID.tmp
+
+type SystemDriveID.tmp > SystemDriveID.txt
+
+for /f "skip=1 tokens=1,2,3,4* " %%i in (SystemDriveID.txt) do (
+    echo %%i
+    set SystemDriveID=%%i
+)
+echo ################
+echo Get os get "SystemDriveID"="%SystemDriveID%"
+echo ################
+
+echo ################
+echo Remove OS disk in list
+echo ################
+type disksort.tmp | findstr /v " %SystemDriveID% " > disksort.txt
+type disksort.txt
+echo ################
+echo Remove OS disk in list
+echo ################
+
+if disksort.txt == "" goto END
 
 echo ################
 echo Careate icf_info.tmp file
