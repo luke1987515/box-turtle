@@ -107,7 +107,7 @@ set "outputfile=disksort.txt"
 for /f "tokens=*" %%a in ('type "%myfile%" ^| find /v /n "" ^& break ^> "%myfile%"') do (
      set "str=%%a
      set "str=!str:]= !"
-     set "str=!str:[=!"
+	 set "str=!str:[=!"
      >>%outputfile% echo(!str!
 )
 
