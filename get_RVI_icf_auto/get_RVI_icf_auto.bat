@@ -2,7 +2,7 @@
 
 echo.
 echo ################
-echo TO_ICF
+echo Get_RVI_ICF_AUTO
 echo ################
 echo.
 
@@ -111,30 +111,27 @@ for /f "tokens=*" %%a in ('type "%myfile%" ^| find /v /n "" ^& break ^> "%myfile
      >>%outputfile% echo(!str!
 )
 
-
 echo ################
 echo Get 1~%DiskNum%.tmp file-------------
 echo ################
 
 for /f "tokens=1,2,3,4,5,6,7" %%i in (disksort.txt) do (
     set work=%%i
-	echo i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+	::echo i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
     if "%%o"=="" if "%%n"=="" (
-	    echo 11 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+	    ::echo 11 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
 	    echo %%j,%%k,%%l,%%m, > !work!.tmp
 	    )else if "%%o"=="" (
-	        echo 22 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+	        ::echo 22 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
 	        echo %%j,%%k,%%l,%%m %%n, > !work!.tmp
 	    )else (
 	        ::echo 33 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
 	        ::echo %%j,%%k,%%l,%%m, > !work!.tmp
 	)else (
-		echo 44 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+		::echo 44 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
 	    echo %%j,%%k,%%l,%%m %%n %%o, > !work!.tmp
 	)
 )
-
-
 
 echo ################
 echo Careate icf_info.tmp file
@@ -278,24 +275,6 @@ for /f %%a in ('type "%file%"^|find "" /v /c') do set /a cnt=%%a
 echo %file% has %cnt% lines
 
 set DiskNum=%cnt%
-
-::echo ################
-::echo get spic disk info 
-::echo ################
-
-::for /f "tokens=1,2,3,4,5* " %%i in (1.tmp) do (
-::    set TargetID=%%i
-::	set TargetFW=%%j
-::	set AssignedName=%%k
-::   if "%%n"=="" if "%%m"=="" (
-::	    set TargetName=%%l
-::	)else if "%%n"=="" (
-::	    set TargetName=%%l %%m
-::	)else (
-::	    set TargetName=%%l %%m %%n
-::	)
-::)
-
 
 echo ################
 echo Start carte many icf file 
