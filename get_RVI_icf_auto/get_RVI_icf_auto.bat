@@ -21,22 +21,6 @@ echo ################
 echo Get ManagerName= %ManagerName%
 echo ################
 
-echo ################
-echo Get diskdrive get FirmwareRevision, Index, Model
-echo ################
-wmic diskdrive get FirmwareRevision, Index, Model > diskdrive.tmp
-type diskdrive.tmp > diskdrive.txt
-
-for /f "skip=1 tokens=1,2,3,4* " %%i in (diskdrive.txt) do (
-    ::echo %%j %%k %%i
-    set "formattedValue=%%k"
-    ::set ModelName=!formattedValue:~0,20!
-    echo %%j !formattedValue:~0,20! %%i >> disklist.tmp
-)
-
-::type disklist.tmp
-sort disklist.tmp > disksort.tmp
-type disksort.tmp
 
 echo ################
 echo Get os get "SystemDrive"
@@ -70,15 +54,87 @@ echo Get os get "SystemDriveID"="%SystemDriveID%"
 echo ################
 
 echo ################
-echo Remove OS disk in list
+echo Get diskdrive get FirmwareRevision, Index, InterfaceType, Model
 echo ################
-type disksort.tmp | findstr /v " %SystemDriveID% " > disksort.txt
-type disksort.txt
+::ic diskdrive get              %%i,   %%j,           %%k,   %%l
+wmic diskdrive get FirmwareRevision, Index, InterfaceType, Model  > diskdrive.tmp
+type diskdrive.tmp > diskdrive.txt
+
+for /f "skip=1 tokens=1,2,3,4,5* " %%i in (diskdrive.txt) do (
+    set "formattedValue=%%l %%m %%n"
+	set /A a=100+%%j
+    if %%j==%SystemDriveID% (
+        echo REMOVE %%j !formattedValue:~0,20! %%i -- THIS IS OS DISK
+    )else (
+		set b=SAS_2K
+		if %%k==IDE (
+		    set b=SATA_6K
+		    ::echo !a:~1! !formattedValue:~0,20! %%i 
+		    set "line[!a:~1!]=%%j %%i !b! ^(!formattedValue:~0,20! 
+		)else if %%l==ATA (
+			set b=SATA_6K
+            set "line[!a:~1!]=%%j %%i !b! !formattedValue:~0,20!
+        )else (
+            set "line[!a:~1!]=%%j %%i !b! !formattedValue:~0,20!
+		)	    
+    )
+)
+
+if exist disksort.txt del /Q disksort.txt
+
+::Show array elements
+::sort diskdrive.txt
+for /F "tokens=2 delims==" %%a in ('set line[') do echo %%a >> disksort.tmp
+type disksort.tmp
+
 echo ################
-echo Remove OS disk in list
+echo Get disksort.tmp file line-------------
+echo ################
+set file=disksort.tmp
+set /a cnt=0
+for /f %%a in ('type "%file%"^|find "" /v /c') do set /a cnt=%%a
+echo %file% has %cnt% lines
+
+set DiskNum=%cnt%
+
+echo ################
+echo Get disksort.txt file-------------
 echo ################
 
-if disksort.txt == "" goto END
+set "myfile=disksort.tmp"
+set "outputfile=disksort.txt"
+
+for /f "tokens=*" %%a in ('type "%myfile%" ^| find /v /n "" ^& break ^> "%myfile%"') do (
+     set "str=%%a
+     set "str=!str:]= !"
+     set "str=!str:[=!"
+     >>%outputfile% echo(!str!
+)
+
+
+echo ################
+echo Get 1~%DiskNum%.tmp file-------------
+echo ################
+
+for /f "tokens=1,2,3,4,5,6,7" %%i in (disksort.txt) do (
+    set work=%%i
+	echo i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+    if "%%o"=="" if "%%n"=="" (
+	    echo 11 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+	    echo %%j,%%k,%%l,%%m, > !work!.tmp
+	    )else if "%%o"=="" (
+	        echo 22 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+	        echo %%j,%%k,%%l,%%m %%n, > !work!.tmp
+	    )else (
+	        ::echo 33 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+	        ::echo %%j,%%k,%%l,%%m, > !work!.tmp
+	)else (
+		echo 44 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+	    echo %%j,%%k,%%l,%%m %%n %%o, > !work!.tmp
+	)
+)
+
+
 
 echo ################
 echo Careate icf_info.tmp file
@@ -135,11 +191,11 @@ echo 	Total Error Count >> !TampFileName!.tmp
 echo 'END results display >> !TampFileName!.tmp
 echo 'ACCESS SPECIFICATIONS ========================================================= >> !TampFileName!.tmp
 echo 'Access specification name,default assignment >> !TampFileName!.tmp
-echo 	RVI_SAS_disk(2K),NONE >> !TampFileName!.tmp
+echo 	SAS_2K,NONE >> !TampFileName!.tmp
 echo 'size,%% of size,%% reads,%% random,delay,burst,align,reply >> !TampFileName!.tmp
 echo 	2048,100,0,100,0,1,2048,0 >> !TampFileName!.tmp
 echo 'Access specification name,default assignment >> !TampFileName!.tmp
-echo 	RVI_SATA_disk(6K),NONE >> !TampFileName!.tmp
+echo 	SATA_6K,NONE >> !TampFileName!.tmp
 echo 'size,%% of size,%% reads,%% random,delay,burst,align,reply >> !TampFileName!.tmp
 echo 	6144,100,0,100,0,1,6144,0 >> !TampFileName!.tmp
 echo 'END access specifications >> !TampFileName!.tmp
@@ -171,8 +227,8 @@ echo 'Default target settings for worker >> !TampFileName!.tmp
 echo 'Number of outstanding IOs,test connection rate,transactions per connection,use fixed seed,fixed seed value >> !TampFileName!.tmp
 ::echo 	1,DISABLED,1,DISABLED,0 >> !TampFileName!.tmp
 
-:: Careate icf_Worker_info_mid_bot.tmp
-set TampFileName=icf_Worker_info_mid_bot
+:: Careate icf_Worker_info_mid_mid.tmp
+set TampFileName=icf_Worker_info_mid_mid
 ::echo ################
 ::echo Careate !TampFileName!.tmp 
 ::echo ################
@@ -181,7 +237,10 @@ echo 'Disk maximum size,starting sector,Data pattern >> !TampFileName!.tmp
 echo 	0,0,0 >> !TampFileName!.tmp
 echo 'End default target settings for worker >> !TampFileName!.tmp
 echo 'Assigned access specs >> !TampFileName!.tmp
-echo 	RVI_SAS_disk(2K) >> !TampFileName!.tmp
+::echo 	SAS_2K >> !TampFileName!.tmp
+
+:: Careate icf_Worker_info_mid_bot.tmp
+set TampFileName=icf_Worker_info_mid_bot
 echo 'End assigned access specs >> !TampFileName!.tmp
 echo 'Target assignments >> !TampFileName!.tmp
 echo 'Target >> !TampFileName!.tmp
@@ -210,24 +269,53 @@ echo 'END manager list >> !TampFileName!.tmp
 echo Version 1.1.0 >> !TampFileName!.tmp
 
 echo ################
-echo Disk detect...
+echo disksort.txt has xx lines
 echo ################
 
-for /f "tokens=2,3" %%a in ('echo list disk ^| diskpart') do ( 
-    set DiskNum=%%a )
+set file=disksort.txt
+set /a cnt=0
+for /f %%a in ('type "%file%"^|find "" /v /c') do set /a cnt=%%a
+echo %file% has %cnt% lines
+
+set DiskNum=%cnt%
+
+::echo ################
+::echo get spic disk info 
+::echo ################
+
+::for /f "tokens=1,2,3,4,5* " %%i in (1.tmp) do (
+::    set TargetID=%%i
+::	set TargetFW=%%j
+::	set AssignedName=%%k
+::   if "%%n"=="" if "%%m"=="" (
+::	    set TargetName=%%l
+::	)else if "%%n"=="" (
+::	    set TargetName=%%l %%m
+::	)else (
+::	    set TargetName=%%l %%m %%n
+::	)
+::)
+
 
 echo ################
 echo Start carte many icf file 
 echo ################
 echo.
 
-::set DiskNum=26
+::set DiskNum=5
 set FileName=00
 
 for /L %%i in (1, 1, %DiskNum%) do (
     set "formattedValue=000000%%i"
 	set FileName=!formattedValue:~-2!
     echo !FileName!.icf
+    for /f "tokens=1,2,3,4 delims=," %%a in (%%i.tmp) do (
+        set TargetID=%%a
+	    set TargetFW=%%b
+		set AssignedName=%%c
+	    set TargetName=%%d
+    )	
+	echo !AssignedName! !TargetID! !TargetName! !TargetFW!
 	:: imput icf_info_top
 	type icf_info_top.tmp                               >> !FileName!.icf
 	    :: imput icf_Worker_info_top(outstanding=8)
@@ -236,35 +324,58 @@ for /L %%i in (1, 1, %DiskNum%) do (
 	    :: imput icf_Worker_mid_top	 
 	    type icf_Worker_info_mid_top.tmp                >> !FileName!.icf
 	    echo 	8,DISABLED,1,DISABLED,0 >> !FileName!.icf
+	    :: imput icf_Worker_info_mid_mid
+	    type icf_Worker_info_mid_mid.tmp                >> !FileName!.icf
+		echo 	!AssignedName! >> !FileName!.icf
 	    :: imput icf_Worker_info_mid_bot
 	    type icf_Worker_info_mid_bot.tmp                >> !FileName!.icf
-	    echo     %%i: "">> !FileName!.icf
+	    echo     !TargetID!: "!TargetName! !TargetFW!" >> !FileName!.icf
 	    :: imput icf_Worker_info_bot
 	    type icf_Worker_info_bot.tmp                    >> !FileName!.icf
 	:: imput Other Worker info(outstanding=1)
 	for /L %%j in (2, 1, %DiskNum%) do (
 	    if %%i==%%j (
+		    for /f "tokens=1,2,3,4 delims=," %%a in (1.tmp) do (
+                set TargetID=%%a
+	            set TargetFW=%%b
+	            set AssignedName=%%c
+	            set TargetName=%%d
+			)	
+	        echo !AssignedName! !TargetID! !TargetName! !TargetFW!
 		    :: imput icf_Worker_info_top
 	        type icf_Worker_info_top.tmp                >> !FileName!.icf
             echo     Worker %%j >> !FileName!.icf
 	        :: imput icf_Worker_mid_top	 
 	        type icf_Worker_info_mid_top.tmp            >> !FileName!.icf
 	        echo 	1,DISABLED,1,DISABLED,0 >> !FileName!.icf
-	        :: imput icf_Worker_info_mid_bot
+	        :: imput icf_Worker_info_mid_mid
+	        type icf_Worker_info_mid_mid.tmp                >> !FileName!.icf
+		    echo 	!AssignedName! >> !FileName!.icf
+			:: imput icf_Worker_info_mid_bot
 	        type icf_Worker_info_mid_bot.tmp            >> !FileName!.icf
-	        echo     1: "" >> !FileName!.icf
+	        echo    !TargetID!: "!TargetName! !TargetFW!" >> !FileName!.icf
 		    :: imput icf_Worker_info_bot
 	        type icf_Worker_info_bot.tmp                >> !FileName!.icf
 	    )else (
+		    for /f "tokens=1,2,3,4 delims=," %%a in (%%j.tmp) do (
+                set TargetID=%%a
+	            set TargetFW=%%b
+	            set AssignedName=%%c
+	            set TargetName=%%d
+            )
+	        echo !AssignedName! !TargetID! !TargetName! !TargetFW!
 		    :: imput icf_Worker_info_top
 	        type icf_Worker_info_top.tmp                >> !FileName!.icf
             echo     Worker %%j >> !FileName!.icf
 	        :: imput icf_Worker_mid_top	 
 	        type icf_Worker_info_mid_top.tmp            >> !FileName!.icf
 	        echo 	1,DISABLED,1,DISABLED,0 >> !FileName!.icf
-	        :: imput icf_Worker_info_mid_bot
+	        :: imput icf_Worker_info_mid_mid
+	        type icf_Worker_info_mid_mid.tmp                >> !FileName!.icf
+		    echo 	!AssignedName! >> !FileName!.icf
+			:: imput icf_Worker_info_mid_bot
 	        type icf_Worker_info_mid_bot.tmp            >> !FileName!.icf
-	        echo     %%j: "" >> !FileName!.icf
+	        echo    !TargetID!: "!TargetName! !TargetFW!" >> !FileName!.icf
 	        :: imput icf_Worker_info_bot
 	        type icf_Worker_info_bot.tmp                >> !FileName!.icf     
 	    )
@@ -279,3 +390,5 @@ echo ################
 echo.
 
 if exist *.tmp del /Q *.tmp
+
+PAUSE
