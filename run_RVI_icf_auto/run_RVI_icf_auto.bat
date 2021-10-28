@@ -117,13 +117,13 @@ if "%cnt_2%"=="0" if "%cnt%"=="0" (
 		echo ################
 		echo OK - That do it 
 		echo ################
-		if exist iometer (		
+		if exist IOmeter.exe (		
 		    for /L %%i in (1, 1, %cnt%) do (
 		        set "formattedValue=000000%%i"
 	            set FileName=!formattedValue:~-2!
                 echo !FileName!.icf running...
 			    ::type !FileName!.icf
-			    iometer !FileName!.icf !FileName!.csv
+			    IOmeter.exe !FileName!.icf !FileName!.csv
 			)
 			echo ################
 			echo Finish 01~!FileName!.icf
@@ -141,13 +141,13 @@ if "%cnt_2%"=="0" if "%cnt%"=="0" (
 		echo ################
 		echo OK - That do it  
 		echo ################
-		if exist iometer (		
+		if exist IOmeter.exe (		
 		    for /L %%i in (1, 1, %cnt2%) do (
 		        set "formattedValue=000000%%i"
 	            set FileName=!formattedValue:~-3!
                 echo !FileName!.icf running...
 			    ::type !FileName!.icf
-			    iometer !FileName!.icf !FileName!.csv
+			    IOmeter.exe !FileName!.icf !FileName!.csv
 			)
 			echo ################
 			echo Finish 001~!FileName!.icf
