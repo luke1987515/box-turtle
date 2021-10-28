@@ -19,7 +19,7 @@ set DiskNum=%RAND%
 
 ::echo DiskNum="%DiskNum%"
 
-if exist *.icf del /Q *.icf
+::if exist *.icf del /Q *.icf
 
 if "%DiskNum%"=="0" (
     ::echo get DiskNum=0 %DiskNum%
