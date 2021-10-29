@@ -41,13 +41,18 @@ echo ################
 echo Get os get "SystemDriveID"
 echo ################
 
-wmic logicaldisk where 'DeviceID="%SystemDrive%"' get Access > SystemDriveID.tmp
+wmic partition where 'BootPartition="TRUE"' get DeviceID,BootPartition > SystemDriveID.tmp
+::wmic logicaldisk where 'DeviceID="%SystemDrive%"' get Access > SystemDriveID.tmp
 
 type SystemDriveID.tmp > SystemDriveID.txt
 
+if exist SystemDriveID.tmp del /Q SystemDriveID.tmp
+
 for /f "skip=1 tokens=1,2,3,4* " %%i in (SystemDriveID.txt) do (
-    echo %%i
-    set SystemDriveID=%%i
+    echo i="%%i" j="%%j" k="%%k" l="%%l"
+    echo BootableDriveID=%%k
+    set "SystemDriveID=%%k"
+    echo !SystemDriveID:~1,1! >> SystemDriveID.tmp
 )
 echo ################
 echo Get os get "SystemDriveID"="%SystemDriveID%"
@@ -63,9 +68,9 @@ type diskdrive.tmp > diskdrive.txt
 for /f "skip=1 tokens=1,2,3,4,5* " %%i in (diskdrive.txt) do (
     set "formattedValue=%%l %%m %%n"
 	set /A a=100+%%j
-    if %%j==%SystemDriveID% (
-        echo REMOVE %%j !formattedValue:~0,20! %%i -- THIS IS OS DISK
-    )else (
+        if "%%k"=="USB" (
+            echo REMOVE %%j !formattedValue:~0,20! %%i -- THIS IS USB DISK
+        )else (
 		set b=SAS_2K
 		if %%k==IDE (
 		    set b=SATA_6K
@@ -75,18 +80,84 @@ for /f "skip=1 tokens=1,2,3,4,5* " %%i in (diskdrive.txt) do (
 			set b=SATA_6K
             set "line[!a:~1!]=%%j %%i !b! !formattedValue:~0,20!
         )else (
-            set "line[!a:~1!]=%%j %%i !b! !formattedValue:~0,20!
-		)	    
+            set "line[!a:~1!]=%%j %%i !b! %%l %%m
+		) 
     )
 )
 
-if exist disksort.txt del /Q disksort.txt
+if exist disksort_os.txt del /Q disksort_os.txt
 
 ::Show array elements
 ::sort diskdrive.txt
-for /F "tokens=2 delims==" %%a in ('set line[') do echo %%a >> disksort.tmp
-type disksort.tmp
+for /F "tokens=2 delims==" %%a in ('set line[') do echo %%a >> disksort_os.tmp
+type disksort_os.tmp
 
+if exist disksort.txt del /Q disksort.txt
+
+echo ################
+echo Remove OS Disk
+echo ################
+
+
+copy SystemDriveID.tmp SystemDriveID_tmp.tmp
+copy disksort_os.tmp disksort_os_tmp.tmp
+
+:get_ID
+
+set "ID="
+
+for /f "tokens=1" %%z in (SystemDriveID_tmp.tmp) do (
+    echo "z"="%%z"
+    set ID=%%z
+    goto nextline
+)
+:nextline
+
+if "%ID%"=="" (
+    echo No remove bootable disk ID
+)else (
+    findstr /v "%ID%" < SystemDriveID_tmp.tmp > cat.txt
+    echo ========
+    type cat.txt
+    echo ========
+)
+
+echo "ID"="%ID%"
+
+if "%ID%"=="" (
+    echo Finish remove bootable disk
+)else (
+    for /f "tokens=1,* " %%i in (disksort_os_tmp.tmp) do (
+        if "%%i"=="%ID%" (
+            echo REMOVE %%i --- THIS IS OS_bootable DISK
+        )else (
+            echo i="%%i" j="%%j"
+            echo %%i %%j >> dog.txt
+        )
+    )
+    move cat.txt SystemDriveID_tmp.tmp
+    move dog.txt disksort_os_tmp.tmp 
+    goto get_ID
+)
+
+echo ========
+echo SystemDriveID_tmp.tmp
+echo ========
+type SystemDriveID_tmp.tmp
+echo ========
+echo.
+echo ========
+echo disksort_os_tmp.tmp
+echo ========
+type disksort_os_tmp.tmp
+echo ========
+move disksort_os_tmp.tmp disksort.tmp
+
+echo ################
+echo ################
+type disksort.tmp
+echo ################
+echo ################
 echo ################
 echo Get disksort.tmp file line-------------
 echo ################
@@ -137,6 +208,10 @@ echo ################
 echo Careate icf_info.tmp file
 echo ################
 
+set minutes=0
+set seconds=20
+set RampUpTime=0
+
 :: Careate icf_info_top.tmp
 set TampFileName=icf_info_top
 ::echo ################
@@ -149,9 +224,9 @@ echo 'Test Description >> !TampFileName!.tmp
 echo. >> !TampFileName!.tmp
 echo 'Run Time >> !TampFileName!.tmp
 echo '	hours      minutes    seconds >> !TampFileName!.tmp
-echo 	0          10         0 >> !TampFileName!.tmp
+echo 	0          %minutes%         %seconds% >> !TampFileName!.tmp
 echo 'Ramp Up Time ^(s^) >> !TampFileName!.tmp
-echo 	300 >> !TampFileName!.tmp
+echo 	%RampUpTime% >> !TampFileName!.tmp
 echo 'Default Disk Workers to Spawn >> !TampFileName!.tmp
 echo 	NUMBER_OF_CPUS >> !TampFileName!.tmp
 echo 'Default Network Workers to Spawn >> !TampFileName!.tmp
@@ -281,12 +356,15 @@ echo Start carte many icf file
 echo ################
 echo.
 
-::set DiskNum=5
+echo "DiskNum"="%DiskNum%"
+
+::set DiskNum=23
 set FileName=00
 
 for /L %%i in (1, 1, %DiskNum%) do (
     set "formattedValue=000000%%i"
 	set FileName=!formattedValue:~-2!
+	cls
     echo !FileName!.icf
     for /f "tokens=1,2,3,4 delims=," %%a in (%%i.tmp) do (
         set TargetID=%%a
