@@ -52,12 +52,12 @@ for /f "skip=1 tokens=1,2,3,4* " %%i in (SystemDriveID.txt) do (
     echo i="%%i" j="%%j" k="%%k" l="%%l"
     echo BootableDriveID=%%k
     set "SystemDriveID=%%k"
-    echo !SystemDriveID:~1,1! >> SystemDriveID.tmp
+    echo !SystemDriveID:~1,-1! >> SystemDriveID.tmp
 )
 echo ################
 echo Get os get "SystemDriveID"="%SystemDriveID%"
 echo ################
-
+type SystemDriveID.tmp
 echo ################
 echo Get diskdrive get FirmwareRevision, Index, InterfaceType, Model
 echo ################
@@ -208,9 +208,9 @@ echo ################
 echo Careate icf_info.tmp file
 echo ################
 
-set minutes=0
-set seconds=20
-set RampUpTime=0
+set minutes=10
+set seconds=0
+set RampUpTime=300
 
 :: Careate icf_info_top.tmp
 set TampFileName=icf_info_top
@@ -442,7 +442,7 @@ for /L %%i in (1, 1, %DiskNum%) do (
 
 echo.
 echo ################
-echo Complete carte many icf file 
+echo Complete carte %DiskNum% icf file 
 echo ################
 echo.
 
