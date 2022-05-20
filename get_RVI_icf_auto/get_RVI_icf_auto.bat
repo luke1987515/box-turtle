@@ -75,7 +75,9 @@ for /f "skip=1 tokens=1,2,3,4,5* " %%i in (diskdrive.txt) do (
 		if %%k==IDE (
 		    set b=SATA_6K
 		    ::echo !a:~1! !formattedValue:~0,20! %%i 
-		    set "line[!a:~1!]=%%j %%i !b! ^(!formattedValue:~0,20! 
+		    ::set "line[!a:~1!]=%%j %%i !b! ^(!formattedValue:~0,20! //for TOSHIBA
+		    ::set "line[!a:~1!]=%%j %%i !b! ^( !formattedValue:~0,20! //for SEAGATE-ST1000NX0313
+		    set "line[!a:~1!]=%%j %%i !b! ^( !formattedValue:~0,20!
 		)else if %%l==ATA (
 			set b=SATA_6K
             set "line[!a:~1!]=%%j %%i !b! !formattedValue:~0,20!
