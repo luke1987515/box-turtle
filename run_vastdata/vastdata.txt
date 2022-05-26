@@ -1,0 +1,79 @@
+vastdata
+
+sysadmin
+superuser
+
+
+
+sudo ./pcie_link_control_ceres.py -a enable -g default
+
+
+
+sudo ./check_pci_ceres.py   =>check check pci error
+
+
+./chech_pci_ceres.py -c =>clear pci error
+
+
+sudo ./thermal_test_ceres.sh -t 259000 -n -s -c
+
+sudo ./thermal_test_ceres.sh -t 259000 -s -c
+
+
+mlxconfig -d /dev/mst/mt41682_pciconf0 set LINK_TYPE_P1=2 LINK_TYPE_P2=2
+sudo 
+
+sudo ./slot_to_nvme_ceres.py -a  =>check HDD location
+
+sudo date -s "2022-05-20 11:05:00"
+sudo /etc/init.d/opensmd start =>enable BF lan
+
+sudo mlxfwmanager  => check BF FW
+
+
+###BMC ip setting
+
+ifconfig eth1 192.168.10.2 
+
+ifconfig eth1 192.168.10.1
+
+### Updaate MCU
+
+pscp Ceres_MCU_v0.0.2.8.hex sysadmin@192.168.10.2:/tmp/AAA
+
+sysadmin
+superuser
+ipmitool -H 127.0.0.1 -U admin -P admin sensor
+
+ipmitool -H 127.0.0.1 -U admin -P admin sel elist
+
+ipmitool -I lan -H 127.0.0.1 -U admin -P admin raw 0x3a 0xcb 0x0 0x8 0x2f 0x74 0x6d 0x70 0x2f 0x41 0x41 0x41
+
+ipmitool -I lanplus -H 192.168.10.2 -U admin -P admin sel elist
+ipmitool -I lanplus -H 192.168.10.1 -U admin -P admin sel elist
+
+
+
+##### NEW MCU Version ######
+
+C:\ipmitool_win>ipmitool.exe -I lan -H 192.168.10.1 -U admin -P admin raw 0x3a 0xca
+ 01 00 01 01 00 00 02 07 00 00 02 07 01 04 04 01
+ 01 04 00 02 00 04 00 01
+
+C:\ipmitool_win>ipmitool.exe -I lan -H 192.168.10.2 -U admin -P admin raw 0x3a 0xca
+ 00 01 01 01 00 00 02 07 00 00 02 07 01 04 04 01
+ 01 04 00 02 00 04 00 01
+
+##### NEW MCU Version ######
+
+
+##### OLD MCU Version ######
+
+C:\ipmitool_win>ipmitool.exe -I lan -H 192.168.10.1 -U admin -P admin raw 0x3a 0
+xca
+ 01 fe 01 01 00 00 00 00 ff ff ff ff 01 04 04 01
+ 01 04 00 02 00 04 00 01
+
+C:\ipmitool_win>
+
+##### OLD MCU Version ######
