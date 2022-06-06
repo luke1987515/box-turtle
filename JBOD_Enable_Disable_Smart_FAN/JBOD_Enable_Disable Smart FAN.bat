@@ -25,8 +25,8 @@ for /F %%i in ('sg_scan -s ^| find "AIC"') do (
   sg_ses --descriptor=CoolingElement00 --%operator%=1:7:1 %%i
   echo sg_ses --descriptor=CoolingElement00 --%operator%=1:7:1 %%i
   echo sg_ses --descriptor=CoolingElement00 --get=1:7:1 %%i
-  :: sg_ses --descriptor=SysCoolingElement00 --get=1:7:1 %%i
-  sg_ses --descriptor=SysCoolingElement00 --get=1:7:1 %%i > info_A.tmp
+  :: sg_ses --descriptor=CoolingElement00 --get=1:7:1 %%i
+  sg_ses --descriptor=CoolingElement00 --get=1:7:1 %%i > info_A.tmp
   echo --------------------
   for /f %%a in (info_A.tmp) do (
   set "var=%%a"
