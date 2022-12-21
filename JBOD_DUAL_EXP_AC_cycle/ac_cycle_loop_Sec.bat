@@ -28,7 +28,7 @@ if %count% lss 301 (
         
     ) else ( 
         echo Wait Expander Power on
-        timeout /t 1
+        :: timeout /t 1
         goto :scan
     ) 
 set /a count+=1
