@@ -1,0 +1,1087 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 6.0.2 (Python 3.11.3 on win32)" generated="20230511 17:51:24.642" rpa="false" schemaversion="3">
+<suite id="s1" name="Functionality Test" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test">
+<suite id="s1-s1" name="1. DUT Images" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\1. DUT Images">
+<suite id="s1-s1-s1" name="1. DUT Images copy" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\1. DUT Images\1. DUT Images copy.robot">
+<test id="s1-s1-s1-t1" name="Test Case" line="8">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:27.718" endtime="20230511 17:51:27.718"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:27.718" endtime="20230511 17:51:27.719"/>
+</test>
+<test id="s1-s1-s1-t2" name="Get User Input Test2" line="16">
+<kw name="Log To Console" library="BuiltIn">
+<arg>${\n}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:27.720" endtime="20230511 17:51:27.720"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>Front 45 Angle</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:27.720" endtime="20230511 17:51:27.721"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>Top View</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:27.721" endtime="20230511 17:51:27.721"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>Rear View</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:27.721" endtime="20230511 17:51:27.722"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>上述三張照片都正確嗎？</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:27.722" endtime="20230511 17:51:27.722"/>
+</kw>
+<kw name="Sleep" library="BuiltIn">
+<arg>1</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<msg timestamp="20230511 17:51:28.723" level="INFO">Slept 1 second</msg>
+<status status="PASS" starttime="20230511 17:51:27.722" endtime="20230511 17:51:28.723"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>你只有 3 秒鐘!!!(輸入:y)</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:28.723" endtime="20230511 17:51:28.724"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>YOU HAVE ONELY 3 SEC!!!(Answer:y)</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:28.724" endtime="20230511 17:51:28.724"/>
+</kw>
+<kw name="COSTOM KEYWORD TO INPUTIMEOUT" library="input_timeout">
+<var>${input}</var>
+<msg timestamp="20230511 17:51:29.333" level="INFO">Name your best friend:
+y</msg>
+<msg timestamp="20230511 17:51:29.333" level="INFO">${input} = y</msg>
+<status status="PASS" starttime="20230511 17:51:28.725" endtime="20230511 17:51:29.333"/>
+</kw>
+<kw name="Should Be Equal" library="BuiltIn">
+<arg>${input}</arg>
+<arg>y</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" starttime="20230511 17:51:29.333" endtime="20230511 17:51:29.334"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:27.719" endtime="20230511 17:51:29.334"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:24.666" endtime="20230511 17:51:29.335"/>
+</suite>
+<suite id="s1-s1-s2" name="1. DUT Images" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\1. DUT Images\1. DUT Images.robot">
+<test id="s1-s1-s2-t1" name="Test Case" line="7">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.340" endtime="20230511 17:51:29.340"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:29.340" endtime="20230511 17:51:29.340"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:29.336" endtime="20230511 17:51:29.341"/>
+</suite>
+<status status="PASS" starttime="20230511 17:51:24.663" endtime="20230511 17:51:29.342"/>
+</suite>
+<suite id="s1-s2" name="2. Target Device Configuration and Environment" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\2. Target Device Configuration and Environment">
+<suite id="s1-s2-s1" name="2.1 Table of Test Configuration" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\2. Target Device Configuration and Environment\2.1 Table of Test Configuration.robot">
+<test id="s1-s2-s1-t1" name="Test Case" line="11">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.352" endtime="20230511 17:51:29.352"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:29.352" endtime="20230511 17:51:29.353"/>
+</test>
+<test id="s1-s2-s1-t2" name="Motherboard" line="14">
+<kw name="Set Suite Variable" library="BuiltIn">
+<arg>${file_name}</arg>
+<arg>motherboard</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<msg timestamp="20230511 17:51:29.354" level="INFO">${file_name} = motherboard</msg>
+<status status="PASS" starttime="20230511 17:51:29.354" endtime="20230511 17:51:29.354"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${result}</var>
+<arg>C:/ipmitool/ipmitool.exe fru</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:29.363" level="INFO">Running command 'C:/ipmitool/ipmitool.exe fru 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:29.619" level="INFO">${result} = FRU Device Description : Builtin FRU Device (ID 0)
+ Chassis Type          : Main Server Chassis
+ Chassis Part Number   :             
+ Chassis Serial        :             
+ Board Mfg             : AIC...</msg>
+<status status="PASS" starttime="20230511 17:51:29.354" endtime="20230511 17:51:29.619"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>${result}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.619" endtime="20230511 17:51:29.630"/>
+</kw>
+<kw name="Create File" library="OperatingSystem">
+<arg>${EXECDIR}/${file_name}.txt</arg>
+<arg>${result}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<msg timestamp="20230511 17:51:29.630" level="INFO" html="true">Created file '&lt;a href="file://C:\Users\Administrator\box-turtle\robot_dqa\motherboard.txt"&gt;C:\Users\Administrator\box-turtle\robot_dqa\motherboard.txt&lt;/a&gt;'.</msg>
+<status status="PASS" starttime="20230511 17:51:29.630" endtime="20230511 17:51:29.631"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:29.353" endtime="20230511 17:51:29.631"/>
+</test>
+<test id="s1-s2-s1-t3" name="Motherboard 1" line="20">
+<kw name="Log To Console" library="BuiltIn">
+<arg>${\n}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.632" endtime="20230511 17:51:29.632"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${frt}</var>
+<arg>type ${file_name}.txt | find "Board Mfg"</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:29.639" level="INFO">Running command 'type motherboard.txt | find "Board Mfg" 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:29.659" level="INFO">${frt} =  Board Mfg             : AIC</msg>
+<status status="PASS" starttime="20230511 17:51:29.632" endtime="20230511 17:51:29.659"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${frt}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.659" endtime="20230511 17:51:29.659"/>
+</kw>
+<kw name="Fetch From Right" library="String">
+<var>${Product_Name}</var>
+<arg>${frt}</arg>
+<arg>${SPACE}</arg>
+<doc>Returns contents of the ``string`` after the last occurrence of ``marker``.</doc>
+<msg timestamp="20230511 17:51:29.661" level="INFO">${Product_Name} = AIC</msg>
+<status status="PASS" starttime="20230511 17:51:29.660" endtime="20230511 17:51:29.661"/>
+</kw>
+<kw name="Log" library="BuiltIn">
+<arg>[${Product_Name}]</arg>
+<doc>Logs the given message with the given level.</doc>
+<msg timestamp="20230511 17:51:29.661" level="INFO">[AIC]</msg>
+<status status="PASS" starttime="20230511 17:51:29.661" endtime="20230511 17:51:29.661"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${Product_Name}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.661" endtime="20230511 17:51:29.662"/>
+</kw>
+<kw name="Should Be Equal As Strings" library="BuiltIn">
+<arg>AIC</arg>
+<arg>${Product_Name}</arg>
+<doc>Fails if objects are unequal after converting them to strings.</doc>
+<status status="PASS" starttime="20230511 17:51:29.662" endtime="20230511 17:51:29.662"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:29.631" endtime="20230511 17:51:29.662"/>
+</test>
+<test id="s1-s2-s1-t4" name="Motherboard 2" line="30">
+<kw name="Log To Console" library="BuiltIn">
+<arg>${\n}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.663" endtime="20230511 17:51:29.664"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${frt}</var>
+<arg>type ${file_name}.txt | find "Board Product"</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:29.670" level="INFO">Running command 'type motherboard.txt | find "Board Product" 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:29.689" level="INFO">${frt} =  Board Product         : TUCANA</msg>
+<status status="PASS" starttime="20230511 17:51:29.664" endtime="20230511 17:51:29.689"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${frt}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.689" endtime="20230511 17:51:29.689"/>
+</kw>
+<kw name="Fetch From Right" library="String">
+<var>${Product_Name}</var>
+<arg>${frt}</arg>
+<arg>${SPACE}</arg>
+<doc>Returns contents of the ``string`` after the last occurrence of ``marker``.</doc>
+<msg timestamp="20230511 17:51:29.690" level="INFO">${Product_Name} = TUCANA</msg>
+<status status="PASS" starttime="20230511 17:51:29.690" endtime="20230511 17:51:29.690"/>
+</kw>
+<kw name="Log" library="BuiltIn">
+<arg>[${Product_Name}]</arg>
+<doc>Logs the given message with the given level.</doc>
+<msg timestamp="20230511 17:51:29.690" level="INFO">[TUCANA]</msg>
+<status status="PASS" starttime="20230511 17:51:29.690" endtime="20230511 17:51:29.690"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${Product_Name}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.690" endtime="20230511 17:51:29.691"/>
+</kw>
+<kw name="Should Be Equal As Strings" library="BuiltIn">
+<arg>TUCANA</arg>
+<arg>${Product_Name}</arg>
+<doc>Fails if objects are unequal after converting them to strings.</doc>
+<status status="PASS" starttime="20230511 17:51:29.691" endtime="20230511 17:51:29.691"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:29.663" endtime="20230511 17:51:29.691"/>
+</test>
+<test id="s1-s2-s1-t5" name="Operation System 1" line="40">
+<kw name="Log To Console" library="BuiltIn">
+<arg>${\n}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.692" endtime="20230511 17:51:29.693"/>
+</kw>
+<kw name="Evaluate" library="BuiltIn">
+<var>${system}</var>
+<arg>platform.system()</arg>
+<arg>platform</arg>
+<doc>Evaluates the given expression in Python and returns the result.</doc>
+<msg timestamp="20230511 17:51:29.707" level="INFO">${system} = Windows</msg>
+<status status="PASS" starttime="20230511 17:51:29.693" endtime="20230511 17:51:29.707"/>
+</kw>
+<kw name="Log" library="BuiltIn">
+<arg>[${system}]</arg>
+<doc>Logs the given message with the given level.</doc>
+<msg timestamp="20230511 17:51:29.707" level="INFO">[Windows]</msg>
+<status status="PASS" starttime="20230511 17:51:29.707" endtime="20230511 17:51:29.708"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${system}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:29.708" endtime="20230511 17:51:29.708"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:29.692" endtime="20230511 17:51:29.708"/>
+</test>
+<test id="s1-s2-s1-t6" name="Operation System 2" line="46">
+<kw name="Set Suite Variable" library="BuiltIn">
+<arg>${file_name}</arg>
+<arg>Operation_System</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<msg timestamp="20230511 17:51:29.709" level="INFO">${file_name} = Operation_System</msg>
+<status status="PASS" starttime="20230511 17:51:29.709" endtime="20230511 17:51:29.709"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${result}</var>
+<arg>systeminfo</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:29.727" level="INFO">Running command 'systeminfo 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:31.603" level="INFO">${result} = 
+Host Name:                 DQA-LUKE-T-TU01
+OS Name:                   Microsoft Windows Server 2022 Datacenter
+OS Version:                10.0.20348 N/A Build 20348
+OS Manufacturer:           Microso...</msg>
+<status status="PASS" starttime="20230511 17:51:29.710" endtime="20230511 17:51:31.603"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>${result}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.607" endtime="20230511 17:51:31.611"/>
+</kw>
+<kw name="Create File" library="OperatingSystem">
+<arg>${EXECDIR}/${file_name}.txt</arg>
+<arg>${result}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<msg timestamp="20230511 17:51:31.612" level="INFO" html="true">Created file '&lt;a href="file://C:\Users\Administrator\box-turtle\robot_dqa\Operation_System.txt"&gt;C:\Users\Administrator\box-turtle\robot_dqa\Operation_System.txt&lt;/a&gt;'.</msg>
+<status status="PASS" starttime="20230511 17:51:31.612" endtime="20230511 17:51:31.613"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:29.709" endtime="20230511 17:51:31.613"/>
+</test>
+<test id="s1-s2-s1-t7" name="Operation System 3" line="52">
+<kw name="Log To Console" library="BuiltIn">
+<arg>${\n}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.614" endtime="20230511 17:51:31.614"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${frt}</var>
+<arg>type ${file_name}.txt | find "OS Name"</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:31.621" level="INFO">Running command 'type Operation_System.txt | find "OS Name" 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:31.645" level="INFO">${frt} = OS Name:                   Microsoft Windows Server 2022 Datacenter</msg>
+<status status="PASS" starttime="20230511 17:51:31.615" endtime="20230511 17:51:31.645"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${frt}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.646" endtime="20230511 17:51:31.646"/>
+</kw>
+<kw name="Fetch From Right" library="String">
+<var>${Product_Name}</var>
+<arg>${frt}</arg>
+<arg>Microsoft Windows${SPACE}</arg>
+<doc>Returns contents of the ``string`` after the last occurrence of ``marker``.</doc>
+<msg timestamp="20230511 17:51:31.647" level="INFO">${Product_Name} = Server 2022 Datacenter</msg>
+<status status="PASS" starttime="20230511 17:51:31.646" endtime="20230511 17:51:31.647"/>
+</kw>
+<kw name="Log" library="BuiltIn">
+<arg>[${Product_Name}]</arg>
+<doc>Logs the given message with the given level.</doc>
+<msg timestamp="20230511 17:51:31.647" level="INFO">[Server 2022 Datacenter]</msg>
+<status status="PASS" starttime="20230511 17:51:31.647" endtime="20230511 17:51:31.647"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${Product_Name}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.647" endtime="20230511 17:51:31.648"/>
+</kw>
+<kw name="Should Be Equal As Strings" library="BuiltIn">
+<arg>Server 2022 Datacenter</arg>
+<arg>${Product_Name}</arg>
+<doc>Fails if objects are unequal after converting them to strings.</doc>
+<status status="PASS" starttime="20230511 17:51:31.648" endtime="20230511 17:51:31.648"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.613" endtime="20230511 17:51:31.648"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:29.345" endtime="20230511 17:51:31.649"/>
+</suite>
+<status status="PASS" starttime="20230511 17:51:29.343" endtime="20230511 17:51:31.650"/>
+</suite>
+<suite id="s1-s3" name="3. JBOD Functional Test" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test">
+<suite id="s1-s3-s1" name="3.01 Redundant Power Module" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.01 Redundant Power Module.robot">
+<test id="s1-s3-s1-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.656" endtime="20230511 17:51:31.656"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.656" endtime="20230511 17:51:31.657"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.653" endtime="20230511 17:51:31.657"/>
+</suite>
+<suite id="s1-s3-s2" name="3.02 System Fan" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.02 System Fan.robot">
+<test id="s1-s3-s2-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.661" endtime="20230511 17:51:31.661"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.660" endtime="20230511 17:51:31.661"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.658" endtime="20230511 17:51:31.662"/>
+</suite>
+<suite id="s1-s3-s3" name="3.03 Expander" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.03 Expander.robot">
+<test id="s1-s3-s3-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.666" endtime="20230511 17:51:31.666"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.665" endtime="20230511 17:51:31.666"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.663" endtime="20230511 17:51:31.667"/>
+</suite>
+<suite id="s1-s3-s4" name="3.04 Burn-in Test" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.04 Burn-in Test.robot">
+<test id="s1-s3-s4-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.670" endtime="20230511 17:51:31.670"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.670" endtime="20230511 17:51:31.671"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.668" endtime="20230511 17:51:31.671"/>
+</suite>
+<suite id="s1-s3-s5" name="3.05 LED Function" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.05 LED Function.robot">
+<test id="s1-s3-s5-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.675" endtime="20230511 17:51:31.675"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.674" endtime="20230511 17:51:31.675"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.672" endtime="20230511 17:51:31.676"/>
+</suite>
+<suite id="s1-s3-s6" name="3.06 Mute Button" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.06 Mute Button.robot">
+<test id="s1-s3-s6-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.679" endtime="20230511 17:51:31.680"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.679" endtime="20230511 17:51:31.680"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.677" endtime="20230511 17:51:31.680"/>
+</suite>
+<suite id="s1-s3-s7" name="3.07 Firmware Upgrade" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.07 Firmware Upgrade.robot">
+<test id="s1-s3-s7-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.684" endtime="20230511 17:51:31.684"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.684" endtime="20230511 17:51:31.684"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.681" endtime="20230511 17:51:31.685"/>
+</suite>
+<suite id="s1-s3-s8" name="3.08 Temperature Sensor" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.08 Temperature Sensor.robot">
+<test id="s1-s3-s8-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.689" endtime="20230511 17:51:31.689"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.688" endtime="20230511 17:51:31.689"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.686" endtime="20230511 17:51:31.690"/>
+</suite>
+<suite id="s1-s3-s9" name="3.09 SES Lighting Signal" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.09 SES Lighting Signal.robot">
+<test id="s1-s3-s9-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.693" endtime="20230511 17:51:31.693"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.693" endtime="20230511 17:51:31.694"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.691" endtime="20230511 17:51:31.694"/>
+</suite>
+<suite id="s1-s3-s10" name="3.10 SES page2 Element Status" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.10 SES page2 Element Status.robot">
+<test id="s1-s3-s10-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.698" endtime="20230511 17:51:31.698"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.698" endtime="20230511 17:51:31.698"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.695" endtime="20230511 17:51:31.699"/>
+</suite>
+<suite id="s1-s3-s11" name="3.11 JBOD Remote" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.11 JBOD Remote.robot">
+<test id="s1-s3-s11-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.703" endtime="20230511 17:51:31.703"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.702" endtime="20230511 17:51:31.703"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.700" endtime="20230511 17:51:31.704"/>
+</suite>
+<suite id="s1-s3-s12" name="3.12 Shake Test" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.12 Shake Test.robot">
+<test id="s1-s3-s12-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.707" endtime="20230511 17:51:31.708"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.707" endtime="20230511 17:51:31.708"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.705" endtime="20230511 17:51:31.708"/>
+</suite>
+<suite id="s1-s3-s13" name="3.13 HDD Hot-swap" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.13 HDD Hot-swap.robot">
+<test id="s1-s3-s13-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.712" endtime="20230511 17:51:31.712"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.712" endtime="20230511 17:51:31.713"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.709" endtime="20230511 17:51:31.713"/>
+</suite>
+<suite id="s1-s3-s14" name="3.15 Expander hot-swap" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.15 Expander hot-swap.robot">
+<test id="s1-s3-s14-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.717" endtime="20230511 17:51:31.717"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.716" endtime="20230511 17:51:31.717"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.714" endtime="20230511 17:51:31.718"/>
+</suite>
+<suite id="s1-s3-s15" name="3.16 AC DC Power cycling" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.16 AC DC Power cycling.robot">
+<test id="s1-s3-s15-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.721" endtime="20230511 17:51:31.721"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.721" endtime="20230511 17:51:31.722"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.718" endtime="20230511 17:51:31.722"/>
+</suite>
+<suite id="s1-s3-s16" name="3.17 SAS Zoning" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.17 SAS Zoning.robot">
+<test id="s1-s3-s16-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.726" endtime="20230511 17:51:31.726"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.725" endtime="20230511 17:51:31.726"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.723" endtime="20230511 17:51:31.727"/>
+</suite>
+<suite id="s1-s3-s17" name="3.18 JBOD Cascade" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.18 JBOD Cascade.robot">
+<test id="s1-s3-s17-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.730" endtime="20230511 17:51:31.731"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.730" endtime="20230511 17:51:31.731"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.728" endtime="20230511 17:51:31.732"/>
+</suite>
+<suite id="s1-s3-s18" name="3.19 Manually PWM" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.19 Manually PWM.robot">
+<test id="s1-s3-s18-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.735" endtime="20230511 17:51:31.735"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.735" endtime="20230511 17:51:31.735"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.732" endtime="20230511 17:51:31.736"/>
+</suite>
+<suite id="s1-s3-s19" name="3.20 MPIO" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.20 MPIO.robot">
+<test id="s1-s3-s19-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.740" endtime="20230511 17:51:31.740"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.739" endtime="20230511 17:51:31.740"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.737" endtime="20230511 17:51:31.741"/>
+</suite>
+<suite id="s1-s3-s20" name="3.21 DD command stress JBOD" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.21 DD command stress JBOD.robot">
+<test id="s1-s3-s20-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.744" endtime="20230511 17:51:31.744"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.744" endtime="20230511 17:51:31.745"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.741" endtime="20230511 17:51:31.745"/>
+</suite>
+<suite id="s1-s3-s21" name="3.22 Diag Drive Led" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.22 diag_drive_led.robot">
+<test id="s1-s3-s21-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.749" endtime="20230511 17:51:31.749"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.748" endtime="20230511 17:51:31.749"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.746" endtime="20230511 17:51:31.750"/>
+</suite>
+<suite id="s1-s3-s22" name="3.23 Sas Standby Timer" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.23 sas_standby_timer.robot">
+<test id="s1-s3-s22-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.753" endtime="20230511 17:51:31.753"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.753" endtime="20230511 17:51:31.754"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.751" endtime="20230511 17:51:31.754"/>
+</suite>
+<suite id="s1-s3-s23" name="3.24 Check wide port on off standby" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.24 Check_wide_port on off standby.robot">
+<test id="s1-s3-s23-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.758" endtime="20230511 17:51:31.758"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.758" endtime="20230511 17:51:31.758"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.755" endtime="20230511 17:51:31.759"/>
+</suite>
+<suite id="s1-s3-s24" name="3.25 Serial Number And Enclosure Number" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.25 serial number and enclosure number.robot">
+<test id="s1-s3-s24-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.763" endtime="20230511 17:51:31.763"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.762" endtime="20230511 17:51:31.763"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.760" endtime="20230511 17:51:31.764"/>
+</suite>
+<suite id="s1-s3-s25" name="3.26 Enclosure Addr" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.26 enclosure addr.robot">
+<test id="s1-s3-s25-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.767" endtime="20230511 17:51:31.768"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.767" endtime="20230511 17:51:31.768"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.765" endtime="20230511 17:51:31.769"/>
+</suite>
+<suite id="s1-s3-s26" name="3.27 Sensor" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.27 sensor.robot">
+<test id="s1-s3-s26-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.772" endtime="20230511 17:51:31.773"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.772" endtime="20230511 17:51:31.773"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.770" endtime="20230511 17:51:31.773"/>
+</suite>
+<suite id="s1-s3-s27" name="3.28 AT Switch test by power cord" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.28 AT Switch test by power cord.robot">
+<test id="s1-s3-s27-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.777" endtime="20230511 17:51:31.777"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.777" endtime="20230511 17:51:31.777"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.774" endtime="20230511 17:51:31.778"/>
+</suite>
+<suite id="s1-s3-s28" name="3.29 AT Switch test by front power SW" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.29 AT Switch test by front power SW.robot">
+<test id="s1-s3-s28-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.782" endtime="20230511 17:51:31.782"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.781" endtime="20230511 17:51:31.782"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.779" endtime="20230511 17:51:31.783"/>
+</suite>
+<suite id="s1-s3-s29" name="3.29 Expander Wide port LED" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.29 Expander Wide port LED.robot">
+<test id="s1-s3-s29-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.786" endtime="20230511 17:51:31.786"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.786" endtime="20230511 17:51:31.787"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.783" endtime="20230511 17:51:31.787"/>
+</suite>
+<suite id="s1-s3-s30" name="3.30 Customer requirement" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\3. JBOD Functional Test\3.30 Customer requirement.robot">
+<test id="s1-s3-s30-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.791" endtime="20230511 17:51:31.791"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.791" endtime="20230511 17:51:31.791"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.788" endtime="20230511 17:51:31.792"/>
+</suite>
+<status status="PASS" starttime="20230511 17:51:31.651" endtime="20230511 17:51:31.793"/>
+</suite>
+<suite id="s1-s4" name="6. BMC Function Test" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test">
+<suite id="s1-s4-s1" name="6.2.01 Login Page function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.01 Login Page function check.robot">
+<test id="s1-s4-s1-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.799" endtime="20230511 17:51:31.799"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.799" endtime="20230511 17:51:31.799"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.796" endtime="20230511 17:51:31.800"/>
+</suite>
+<suite id="s1-s4-s2" name="6.2.02 Dashboard function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.02 Dashboard function check.robot">
+<test id="s1-s4-s2-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.803" endtime="20230511 17:51:31.804"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.803" endtime="20230511 17:51:31.804"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.801" endtime="20230511 17:51:31.804"/>
+</suite>
+<suite id="s1-s4-s3" name="6.2.03 Sensor function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.03 Sensor function check.robot">
+<test id="s1-s4-s3-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:31.808" endtime="20230511 17:51:31.808"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.808" endtime="20230511 17:51:31.809"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.805" endtime="20230511 17:51:31.809"/>
+</suite>
+<suite id="s1-s4-s4" name="6.2.04 FRU &amp; PSU info check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.04 FRU &amp; PSU info check.robot">
+<test id="s1-s4-s4-t1" name="Test Case fru" line="12">
+<kw name="Set Suite Variable" library="BuiltIn">
+<arg>${file_name}</arg>
+<arg>BMC_fru_info</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<msg timestamp="20230511 17:51:31.814" level="INFO">${file_name} = BMC_fru_info</msg>
+<status status="PASS" starttime="20230511 17:51:31.813" endtime="20230511 17:51:31.814"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${result}</var>
+<arg>${EXECDIR}/tool/ipmitool-1.8.18-cygwin-binary/ipmitool.exe ${bmc_login} fru</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:31.821" level="INFO">Running command 'C:\Users\Administrator\box-turtle\robot_dqa/tool/ipmitool-1.8.18-cygwin-binary/ipmitool.exe -I lanplus -H 192.168.11.11 -U admin -P admin123 fru 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:32.277" level="INFO">${result} = FRU Device Description : Builtin FRU Device (ID 0)
+ Chassis Type          : Main Server Chassis
+ Board Mfg Date        : Mon Jan 17 12:00:00 2022
+ Board Mfg             : AIC
+ Board Product         : ...</msg>
+<status status="PASS" starttime="20230511 17:51:31.814" endtime="20230511 17:51:32.277"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>${\n}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.277" endtime="20230511 17:51:32.277"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>${result}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.282" endtime="20230511 17:51:32.283"/>
+</kw>
+<kw name="Create File" library="OperatingSystem">
+<arg>${EXECDIR}/${file_name}.txt</arg>
+<arg>${result}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<msg timestamp="20230511 17:51:32.284" level="INFO" html="true">Created file '&lt;a href="file://C:\Users\Administrator\box-turtle\robot_dqa\BMC_fru_info.txt"&gt;C:\Users\Administrator\box-turtle\robot_dqa\BMC_fru_info.txt&lt;/a&gt;'.</msg>
+<status status="PASS" starttime="20230511 17:51:32.283" endtime="20230511 17:51:32.284"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${frt}</var>
+<arg>type ${file_name}.txt | find "Product Name"</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:32.291" level="INFO">Running command 'type BMC_fru_info.txt | find "Product Name" 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:32.310" level="INFO">${frt} =  Product Name          : J4024-05-04X</msg>
+<status status="PASS" starttime="20230511 17:51:32.284" endtime="20230511 17:51:32.310"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${frt}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.310" endtime="20230511 17:51:32.311"/>
+</kw>
+<kw name="Fetch From Right" library="String">
+<var>${Product_Name}</var>
+<arg>${frt}</arg>
+<arg>${SPACE}</arg>
+<doc>Returns contents of the ``string`` after the last occurrence of ``marker``.</doc>
+<msg timestamp="20230511 17:51:32.311" level="INFO">${Product_Name} = J4024-05-04X</msg>
+<status status="PASS" starttime="20230511 17:51:32.311" endtime="20230511 17:51:32.311"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${Product_Name}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.311" endtime="20230511 17:51:32.311"/>
+</kw>
+<kw name="Should Be Equal As Strings" library="BuiltIn">
+<arg>J4024-05-04X</arg>
+<arg>${Product_Name}</arg>
+<doc>Fails if objects are unequal after converting them to strings.</doc>
+<status status="PASS" starttime="20230511 17:51:32.312" endtime="20230511 17:51:32.312"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:31.813" endtime="20230511 17:51:32.312"/>
+</test>
+<test id="s1-s4-s4-t2" name="Test Case2 mc info" line="26">
+<kw name="Set Suite Variable" library="BuiltIn">
+<arg>${file_name}</arg>
+<arg>BMC_mc_info</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<msg timestamp="20230511 17:51:32.313" level="INFO">${file_name} = BMC_mc_info</msg>
+<status status="PASS" starttime="20230511 17:51:32.313" endtime="20230511 17:51:32.313"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${result}</var>
+<arg>${EXECDIR}/tool/ipmitool-1.8.18-cygwin-binary/ipmitool.exe ${bmc_login} mc info</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:32.320" level="INFO">Running command 'C:\Users\Administrator\box-turtle\robot_dqa/tool/ipmitool-1.8.18-cygwin-binary/ipmitool.exe -I lanplus -H 192.168.11.11 -U admin -P admin123 mc info 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:32.409" level="INFO">${result} = Device ID                 : 32
+Device Revision           : 1
+Firmware Revision         : 1.15
+IPMI Version              : 2.0
+Manufacturer ID           : 42385
+Manufacturer Name         : Unknown (0xA...</msg>
+<status status="PASS" starttime="20230511 17:51:32.313" endtime="20230511 17:51:32.409"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>${\n}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.410" endtime="20230511 17:51:32.410"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>${result}</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.411" endtime="20230511 17:51:32.412"/>
+</kw>
+<kw name="Create File" library="OperatingSystem">
+<arg>${EXECDIR}/${file_name}.txt</arg>
+<arg>${result}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<msg timestamp="20230511 17:51:32.413" level="INFO" html="true">Created file '&lt;a href="file://C:\Users\Administrator\box-turtle\robot_dqa\BMC_mc_info.txt"&gt;C:\Users\Administrator\box-turtle\robot_dqa\BMC_mc_info.txt&lt;/a&gt;'.</msg>
+<status status="PASS" starttime="20230511 17:51:32.412" endtime="20230511 17:51:32.413"/>
+</kw>
+<kw name="Run" library="OperatingSystem">
+<var>${frt}</var>
+<arg>type ${file_name}.txt | find "Product Name"</arg>
+<doc>Runs the given command in the system and returns the output.</doc>
+<msg timestamp="20230511 17:51:32.420" level="INFO">Running command 'type BMC_mc_info.txt | find "Product Name" 2&gt;&amp;1'.</msg>
+<msg timestamp="20230511 17:51:32.440" level="INFO">${frt} = Product Name              : Unknown (0x4203)</msg>
+<status status="PASS" starttime="20230511 17:51:32.413" endtime="20230511 17:51:32.440"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${frt}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.440" endtime="20230511 17:51:32.440"/>
+</kw>
+<kw name="Fetch From Right" library="String">
+<var>${Product_Name}</var>
+<arg>${frt}</arg>
+<arg>${SPACE}</arg>
+<doc>Returns contents of the ``string`` after the last occurrence of ``marker``.</doc>
+<msg timestamp="20230511 17:51:32.441" level="INFO">${Product_Name} = (0x4203)</msg>
+<status status="PASS" starttime="20230511 17:51:32.441" endtime="20230511 17:51:32.441"/>
+</kw>
+<kw name="Log To Console" library="BuiltIn">
+<arg>[${Product_Name}]</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.441" endtime="20230511 17:51:32.441"/>
+</kw>
+<kw name="Should Be Equal As Strings" library="BuiltIn">
+<arg>(0x4203)</arg>
+<arg>${Product_Name}</arg>
+<doc>Fails if objects are unequal after converting them to strings.</doc>
+<status status="PASS" starttime="20230511 17:51:32.442" endtime="20230511 17:51:32.442"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.313" endtime="20230511 17:51:32.442"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:31.810" endtime="20230511 17:51:32.443"/>
+</suite>
+<suite id="s1-s4-s5" name="6.2.05 Logs &amp; Reports function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.05 Logs &amp; Reports function check.robot">
+<test id="s1-s4-s5-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.447" endtime="20230511 17:51:32.447"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.446" endtime="20230511 17:51:32.447"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.444" endtime="20230511 17:51:32.448"/>
+</suite>
+<suite id="s1-s4-s6" name="6.2.06 Setting function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.06 Setting function check.robot">
+<test id="s1-s4-s6-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.451" endtime="20230511 17:51:32.452"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.451" endtime="20230511 17:51:32.452"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.449" endtime="20230511 17:51:32.452"/>
+</suite>
+<suite id="s1-s4-s7" name="6.2.08 Remote Control function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.08 Remote Control function check.robot">
+<test id="s1-s4-s7-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.456" endtime="20230511 17:51:32.457"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.456" endtime="20230511 17:51:32.457"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.453" endtime="20230511 17:51:32.457"/>
+</suite>
+<suite id="s1-s4-s8" name="6.2.09 Chassis Identify function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.09 Chassis Identify function check.robot">
+<test id="s1-s4-s8-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.461" endtime="20230511 17:51:32.461"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.461" endtime="20230511 17:51:32.461"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.458" endtime="20230511 17:51:32.462"/>
+</suite>
+<suite id="s1-s4-s9" name="6.2.10 HDD Management function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.10 HDD Management function check.robot">
+<test id="s1-s4-s9-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.465" endtime="20230511 17:51:32.466"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.465" endtime="20230511 17:51:32.466"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.463" endtime="20230511 17:51:32.467"/>
+</suite>
+<suite id="s1-s4-s10" name="6.2.11 Power Control function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.11 Power Control function check.robot">
+<test id="s1-s4-s10-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.470" endtime="20230511 17:51:32.470"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.470" endtime="20230511 17:51:32.471"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.468" endtime="20230511 17:51:32.471"/>
+</suite>
+<suite id="s1-s4-s11" name="6.2.12 Maintenance function check" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.12 Maintenance function check.robot">
+<test id="s1-s4-s11-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.475" endtime="20230511 17:51:32.475"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.475" endtime="20230511 17:51:32.475"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.472" endtime="20230511 17:51:32.476"/>
+</suite>
+<suite id="s1-s4-s12" name="6.2.13 Expander BMC Console" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6. BMC Function Test\6.2.13 Expander BMC Console.robot">
+<test id="s1-s4-s12-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.480" endtime="20230511 17:51:32.480"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.480" endtime="20230511 17:51:32.480"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.477" endtime="20230511 17:51:32.481"/>
+</suite>
+<status status="PASS" starttime="20230511 17:51:31.794" endtime="20230511 17:51:32.482"/>
+</suite>
+<suite id="s1-s5" name="6.3 Redfish" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6.3 Redfish">
+<suite id="s1-s5-s1" name="6.3.1 AccountService" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6.3 Redfish\6.3.1 AccountService.robot">
+<test id="s1-s5-s1-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.488" endtime="20230511 17:51:32.488"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.487" endtime="20230511 17:51:32.488"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.485" endtime="20230511 17:51:32.489"/>
+</suite>
+<suite id="s1-s5-s2" name="6.3.2 Chassis" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6.3 Redfish\6.3.2 Chassis.robot">
+<test id="s1-s5-s2-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.492" endtime="20230511 17:51:32.493"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.492" endtime="20230511 17:51:32.493"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.490" endtime="20230511 17:51:32.493"/>
+</suite>
+<suite id="s1-s5-s3" name="6.3.3 Chassis Expander" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6.3 Redfish\6.3.3 Chassis Expander.robot">
+<test id="s1-s5-s3-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.497" endtime="20230511 17:51:32.497"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.497" endtime="20230511 17:51:32.497"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.494" endtime="20230511 17:51:32.498"/>
+</suite>
+<suite id="s1-s5-s4" name="6.3.4 Systems" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6.3 Redfish\6.3.4 Systems.robot">
+<test id="s1-s5-s4-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.501" endtime="20230511 17:51:32.502"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.501" endtime="20230511 17:51:32.502"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.499" endtime="20230511 17:51:32.502"/>
+</suite>
+<suite id="s1-s5-s5" name="6.3.5 Managers" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6.3 Redfish\6.3.5 Managers.robot">
+<test id="s1-s5-s5-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.506" endtime="20230511 17:51:32.506"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.506" endtime="20230511 17:51:32.506"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.503" endtime="20230511 17:51:32.507"/>
+</suite>
+<suite id="s1-s5-s6" name="6.3.6 JsonSchemas" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6.3 Redfish\6.3.6 JsonSchemas.robot">
+<test id="s1-s5-s6-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.511" endtime="20230511 17:51:32.511"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.510" endtime="20230511 17:51:32.511"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.508" endtime="20230511 17:51:32.512"/>
+</suite>
+<suite id="s1-s5-s7" name="6.3.7 UpdateService" source="C:\Users\Administrator\box-turtle\robot_dqa\Functionality Test\6.3 Redfish\6.3.7 UpdateService.robot">
+<test id="s1-s5-s7-t1" name="Test Case" line="5">
+<kw name="Log To Console" library="BuiltIn">
+<arg>hello, world.</arg>
+<doc>Logs the given message to the console.</doc>
+<status status="PASS" starttime="20230511 17:51:32.516" endtime="20230511 17:51:32.516"/>
+</kw>
+<status status="PASS" starttime="20230511 17:51:32.515" endtime="20230511 17:51:32.516"/>
+</test>
+<status status="PASS" starttime="20230511 17:51:32.513" endtime="20230511 17:51:32.517"/>
+</suite>
+<status status="PASS" starttime="20230511 17:51:32.483" endtime="20230511 17:51:32.518"/>
+</suite>
+<status status="PASS" starttime="20230511 17:51:24.644" endtime="20230511 17:51:32.519"/>
+</suite>
+<statistics>
+<total>
+<stat pass="60" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+</tag>
+<suite>
+<stat pass="60" fail="0" skip="0" id="s1" name="Functionality Test">Functionality Test</stat>
+<stat pass="3" fail="0" skip="0" id="s1-s1" name="1. DUT Images">Functionality Test.1. DUT Images</stat>
+<stat pass="2" fail="0" skip="0" id="s1-s1-s1" name="1. DUT Images copy">Functionality Test.1. DUT Images.1. DUT Images copy</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s1-s2" name="1. DUT Images">Functionality Test.1. DUT Images.1. DUT Images</stat>
+<stat pass="7" fail="0" skip="0" id="s1-s2" name="2. Target Device Configuration and Environment">Functionality Test.2. Target Device Configuration and Environment</stat>
+<stat pass="7" fail="0" skip="0" id="s1-s2-s1" name="2.1 Table of Test Configuration">Functionality Test.2. Target Device Configuration and Environment.2.1 Table of Test Configuration</stat>
+<stat pass="30" fail="0" skip="0" id="s1-s3" name="3. JBOD Functional Test">Functionality Test.3. JBOD Functional Test</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s1" name="3.01 Redundant Power Module">Functionality Test.3. JBOD Functional Test.3.01 Redundant Power Module</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s2" name="3.02 System Fan">Functionality Test.3. JBOD Functional Test.3.02 System Fan</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s3" name="3.03 Expander">Functionality Test.3. JBOD Functional Test.3.03 Expander</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s4" name="3.04 Burn-in Test">Functionality Test.3. JBOD Functional Test.3.04 Burn-in Test</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s5" name="3.05 LED Function">Functionality Test.3. JBOD Functional Test.3.05 LED Function</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s6" name="3.06 Mute Button">Functionality Test.3. JBOD Functional Test.3.06 Mute Button</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s7" name="3.07 Firmware Upgrade">Functionality Test.3. JBOD Functional Test.3.07 Firmware Upgrade</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s8" name="3.08 Temperature Sensor">Functionality Test.3. JBOD Functional Test.3.08 Temperature Sensor</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s9" name="3.09 SES Lighting Signal">Functionality Test.3. JBOD Functional Test.3.09 SES Lighting Signal</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s10" name="3.10 SES page2 Element Status">Functionality Test.3. JBOD Functional Test.3.10 SES page2 Element Status</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s11" name="3.11 JBOD Remote">Functionality Test.3. JBOD Functional Test.3.11 JBOD Remote</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s12" name="3.12 Shake Test">Functionality Test.3. JBOD Functional Test.3.12 Shake Test</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s13" name="3.13 HDD Hot-swap">Functionality Test.3. JBOD Functional Test.3.13 HDD Hot-swap</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s14" name="3.15 Expander hot-swap">Functionality Test.3. JBOD Functional Test.3.15 Expander hot-swap</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s15" name="3.16 AC DC Power cycling">Functionality Test.3. JBOD Functional Test.3.16 AC DC Power cycling</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s16" name="3.17 SAS Zoning">Functionality Test.3. JBOD Functional Test.3.17 SAS Zoning</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s17" name="3.18 JBOD Cascade">Functionality Test.3. JBOD Functional Test.3.18 JBOD Cascade</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s18" name="3.19 Manually PWM">Functionality Test.3. JBOD Functional Test.3.19 Manually PWM</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s19" name="3.20 MPIO">Functionality Test.3. JBOD Functional Test.3.20 MPIO</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s20" name="3.21 DD command stress JBOD">Functionality Test.3. JBOD Functional Test.3.21 DD command stress JBOD</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s21" name="3.22 Diag Drive Led">Functionality Test.3. JBOD Functional Test.3.22 Diag Drive Led</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s22" name="3.23 Sas Standby Timer">Functionality Test.3. JBOD Functional Test.3.23 Sas Standby Timer</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s23" name="3.24 Check wide port on off standby">Functionality Test.3. JBOD Functional Test.3.24 Check wide port on off standby</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s24" name="3.25 Serial Number And Enclosure Number">Functionality Test.3. JBOD Functional Test.3.25 Serial Number And Enclosure Number</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s25" name="3.26 Enclosure Addr">Functionality Test.3. JBOD Functional Test.3.26 Enclosure Addr</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s26" name="3.27 Sensor">Functionality Test.3. JBOD Functional Test.3.27 Sensor</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s27" name="3.28 AT Switch test by power cord">Functionality Test.3. JBOD Functional Test.3.28 AT Switch test by power cord</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s28" name="3.29 AT Switch test by front power SW">Functionality Test.3. JBOD Functional Test.3.29 AT Switch test by front power SW</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s29" name="3.29 Expander Wide port LED">Functionality Test.3. JBOD Functional Test.3.29 Expander Wide port LED</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s3-s30" name="3.30 Customer requirement">Functionality Test.3. JBOD Functional Test.3.30 Customer requirement</stat>
+<stat pass="13" fail="0" skip="0" id="s1-s4" name="6. BMC Function Test">Functionality Test.6. BMC Function Test</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s1" name="6.2.01 Login Page function check">Functionality Test.6. BMC Function Test.6.2.01 Login Page function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s2" name="6.2.02 Dashboard function check">Functionality Test.6. BMC Function Test.6.2.02 Dashboard function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s3" name="6.2.03 Sensor function check">Functionality Test.6. BMC Function Test.6.2.03 Sensor function check</stat>
+<stat pass="2" fail="0" skip="0" id="s1-s4-s4" name="6.2.04 FRU &amp; PSU info check">Functionality Test.6. BMC Function Test.6.2.04 FRU &amp; PSU info check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s5" name="6.2.05 Logs &amp; Reports function check">Functionality Test.6. BMC Function Test.6.2.05 Logs &amp; Reports function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s6" name="6.2.06 Setting function check">Functionality Test.6. BMC Function Test.6.2.06 Setting function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s7" name="6.2.08 Remote Control function check">Functionality Test.6. BMC Function Test.6.2.08 Remote Control function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s8" name="6.2.09 Chassis Identify function check">Functionality Test.6. BMC Function Test.6.2.09 Chassis Identify function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s9" name="6.2.10 HDD Management function check">Functionality Test.6. BMC Function Test.6.2.10 HDD Management function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s10" name="6.2.11 Power Control function check">Functionality Test.6. BMC Function Test.6.2.11 Power Control function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s11" name="6.2.12 Maintenance function check">Functionality Test.6. BMC Function Test.6.2.12 Maintenance function check</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s4-s12" name="6.2.13 Expander BMC Console">Functionality Test.6. BMC Function Test.6.2.13 Expander BMC Console</stat>
+<stat pass="7" fail="0" skip="0" id="s1-s5" name="6.3 Redfish">Functionality Test.6.3 Redfish</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s5-s1" name="6.3.1 AccountService">Functionality Test.6.3 Redfish.6.3.1 AccountService</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s5-s2" name="6.3.2 Chassis">Functionality Test.6.3 Redfish.6.3.2 Chassis</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s5-s3" name="6.3.3 Chassis Expander">Functionality Test.6.3 Redfish.6.3.3 Chassis Expander</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s5-s4" name="6.3.4 Systems">Functionality Test.6.3 Redfish.6.3.4 Systems</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s5-s5" name="6.3.5 Managers">Functionality Test.6.3 Redfish.6.3.5 Managers</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s5-s6" name="6.3.6 JsonSchemas">Functionality Test.6.3 Redfish.6.3.6 JsonSchemas</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s5-s7" name="6.3.7 UpdateService">Functionality Test.6.3 Redfish.6.3.7 UpdateService</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

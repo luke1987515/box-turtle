@@ -1,0 +1,63 @@
+
+Host Name:                 DQA-LUKE-T-TU01
+OS Name:                   Microsoft Windows Server 2022 Datacenter
+OS Version:                10.0.20348 N/A Build 20348
+OS Manufacturer:           Microsoft Corporation
+OS Configuration:          Standalone Server
+OS Build Type:             Multiprocessor Free
+Registered Owner:          Windows User
+Registered Organization:   
+Product ID:                00456-50300-27807-AA906
+Original Install Date:     12/26/2022, 2:45:36 PM
+System Boot Time:          5/11/2023, 9:09:34 AM
+System Manufacturer:                   
+System Model:                          
+System Type:               x64-based PC
+Processor(s):              1 Processor(s) Installed.
+                           [01]: Intel64 Family 6 Model 106 Stepping 5 GenuineIntel ~2200 Mhz
+BIOS Version:              American Megatrends International, LLC. Tuca0010, 4/6/2022
+Windows Directory:         C:\Windows
+System Directory:          C:\Windows\system32
+Boot Device:               \Device\HarddiskVolume1
+System Locale:             en-us;English (United States)
+Input Locale:              en-us;English (United States)
+Time Zone:                 (UTC+08:00) Taipei
+Total Physical Memory:     130,727 MB
+Available Physical Memory: 119,322 MB
+Virtual Memory: Max Size:  150,183 MB
+Virtual Memory: Available: 137,882 MB
+Virtual Memory: In Use:    12,301 MB
+Page File Location(s):     C:\pagefile.sys
+Domain:                    WORKGROUP
+Logon Server:              \\DQA-LUKE-T-TU01
+Hotfix(s):                 4 Hotfix(s) Installed.
+                           [01]: KB5022507
+                           [02]: KB5012170
+                           [03]: KB5026370
+                           [04]: KB5026493
+Network Card(s):           5 NIC(s) Installed.
+                           [01]: Intel(R) Ethernet Converged Network Adapter X710-T
+                                 Connection Name: Ethernet
+                                 Status:          Hardware not present
+                           [02]: Intel(R) Ethernet Converged Network Adapter X710-T
+                                 Connection Name: Ethernet 2
+                                 DHCP Enabled:    No
+                                 IP address(es)
+                                 [01]: 192.168.11.254
+                                 [02]: fe80::ddd3:2fb6:3dc:a126
+                           [03]: Intel(R) Ethernet Converged Network Adapter X710-T
+                                 Connection Name: Ethernet 3
+                                 Status:          Hardware not present
+                           [04]: Intel(R) Ethernet Converged Network Adapter X710-T4
+                                 Connection Name: Ethernet 4
+                                 DHCP Enabled:    Yes
+                                 DHCP Server:     192.168.0.11
+                                 IP address(es)
+                                 [01]: 192.168.19.112
+                                 [02]: fe80::2d3f:112b:3953:bedf
+                                 [03]: fd59:a75a:f906:0:e0f9:733f:cd3d:7e15
+                                 [04]: fd59:a75a:f906::abd
+                           [05]: Intel(R) I210 Gigabit Network Connection
+                                 Connection Name: Ethernet 5
+                                 Status:          Hardware not present
+Hyper-V Requirements:      A hypervisor has been detected. Features required for Hyper-V will not be displayed.

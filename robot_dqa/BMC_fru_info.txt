@@ -1,0 +1,9 @@
+FRU Device Description : Builtin FRU Device (ID 0)
+ Chassis Type          : Main Server Chassis
+ Board Mfg Date        : Mon Jan 17 12:00:00 2022
+ Board Mfg             : AIC
+ Board Product         : DB-EXPD27-TY
+ Board Serial          : 504-22071400110008
+ Board Part Number     : BDB-EXP0021AB01
+ Product Manufacturer  : AIC
+ Product Name          : J4024-05-04X
