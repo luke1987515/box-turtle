@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 5.0.1 (Python 3.11.3 on win32)" generated="20230512 16:43:04.465" rpa="false" schemaversion="3">
+<suite id="s1" name="Robot Interactive Console" source="c:\Users\Administrator\.vscode\extensions\robocorp.robotframework-lsp-1.10.1\src\robotframework_ls\vendored\robotframework_interactive\robot_interactive_console.robot">
+<test id="s1-t1" name="Default Task/Test" line="5">
+<kw name="Interpreter Main Loop" library="MainLoop">
+<kw name="Open Browser">
+<arg>https://192.168.11.11/</arg>
+<arg>firefox</arg>
+<arg>options=add_argument("--ignore-certificate-errors")</arg>
+<msg timestamp="20230512 16:43:05.197" level="FAIL">No keyword with name 'Open Browser' found.</msg>
+<status status="FAIL" starttime="20230512 16:43:05.197" endtime="20230512 16:43:05.197"/>
+</kw>
+<kw name="Capture Page Screenshot">
+<status status="NOT RUN" starttime="20230512 16:43:05.198" endtime="20230512 16:43:05.198"/>
+</kw>
+<status status="PASS" starttime="20230512 16:43:04.485" endtime="20230512 16:43:08.045"/>
+</kw>
+<status status="PASS" starttime="20230512 16:43:04.485" endtime="20230512 16:43:08.045"/>
+</test>
+<status status="PASS" starttime="20230512 16:43:04.466" endtime="20230512 16:43:08.046"/>
+</suite>
+<statistics>
+<total>
+<stat pass="1" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+</tag>
+<suite>
+<stat pass="1" fail="0" skip="0" id="s1" name="Robot Interactive Console">Robot Interactive Console</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>
