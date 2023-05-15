@@ -1,0 +1,46 @@
+; sample macro of Tera Term
+;
+; File: mpause.ttl
+; Description: wait command in each millisecond
+; Environment: generic
+; Update: 2006/2/10
+; Author: Yutaka Hirata
+
+
+    ;sendln "sensor"
+    ;pause 3
+
+	;sendln "uptime"
+	;pause 3
+	;sendln "uptime"
+	; wait for 500 milliseconds.
+	;mpause 500
+	;mpause 500
+	;mpause 500
+
+
+; Tera Term Macro Example - Connect to Serial Port
+;
+; This script connects to a local serial port and sends a string.
+
+; Set the serial port settings
+
+sendln
+sendln
+sendln
+
+; Wait for the prompt
+wait '>'
+
+; Send a string
+sendln 'sensor'
+
+; Wait for the response
+wait '>'
+pause 1
+
+
+; Close the serial port
+disconnect
+closett
+exit
