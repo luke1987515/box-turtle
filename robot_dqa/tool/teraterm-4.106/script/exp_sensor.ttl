@@ -30,13 +30,13 @@ sendln
 sendln
 
 ; Wait for the prompt
-wait '>'
+; wait '>'
 
 ; Send a string
 sendln 'sensor'
 
 ; Wait for the response
-wait '>'
+; wait '>'
 pause 1
 
 

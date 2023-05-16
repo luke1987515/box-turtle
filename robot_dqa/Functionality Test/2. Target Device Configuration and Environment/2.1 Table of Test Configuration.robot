@@ -129,26 +129,26 @@ Hard Disk Drive 1
 
 Hard Disk Drive 2
     Set Suite Variable    ${file_name}    Hard_Disk_Drive
-    ${result}    Run    wmic diskdrive get MediaType, Model, SerialNumber, Size
+    ${result}    Run    wmic diskdrive get InterfaceType, Model, SerialNumber, Size
     Log to console    ${result}
     Create File    ${EXECDIR}/${file_name}.txt    ${result}
 
 Hard Disk Drive 3
     Log to console    ${\n}
-    ${frt}    Run    type ${file_name}.txt | find "disk"
+    ${frt}    Run    type ${file_name}.txt | find "IDE"
     Log To Console    [${frt}]
     ${words}    Split String    ${frt}    ${SPACE}
-    Log    [${words}[5]]
-    Log To Console    [${words}[5]]
+    Log    [${words}[12]]
+    Log To Console    [${words}[12]]
 
-    Should Be Equal As Strings    SAMSUNG    ${words}[5]
+    Should Be Equal As Strings    SAMSUNG    ${words}[12]
 
 Hard Disk Drive 4
     Log to console    ${\n}
-    ${frt}    Run    type ${file_name}.txt | find "disk"
+    ${frt}    Run    type ${file_name}.txt | find "IDE"
     Log To Console    [${frt}]
     ${words}    Split String    ${frt}    ${SPACE}
-    Log    [${words}[6]]
-    Log To Console    [${words}[6]]
+    Log    [${words}[13]]
+    Log To Console    [${words}[13]]
 
-    Should Be Equal As Strings    MZ7GE480HMHP-00003    ${words}[6]
+    Should Be Equal As Strings    MZ7GE480HMHP-00003    ${words}[13]
