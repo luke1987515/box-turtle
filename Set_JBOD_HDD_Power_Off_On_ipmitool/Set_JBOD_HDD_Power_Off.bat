@@ -95,3 +95,5 @@ for /L %%i in (1 1 %slot_num%) do (
 	echo.
 	echo.
 )
+
+del /f HDD_status.txt
