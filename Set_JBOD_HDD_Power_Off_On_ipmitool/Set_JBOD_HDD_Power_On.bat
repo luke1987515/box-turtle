@@ -79,7 +79,7 @@ set BMC_IP=192.168.11.11
 for /L %%i in (1 1 %slot_num%) do (
 
     echo =================================
-	echo %%i / %slot_num% --- Power off slot %%i HDD
+	echo %%i / %slot_num% --- Power on  slot %%i HDD
 	echo =================================
 	echo ipmitool.exe -I lanplus -H %BMC_IP% -U admin -P %BMC_Password% raw 0x3C 0x32 %%i 1
 	ipmitool.exe -I lanplus -H %BMC_IP% -U admin -P %BMC_Password% raw 0x3C 0x32 %%i 1
