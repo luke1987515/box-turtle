@@ -58,7 +58,7 @@ set slot_num=!_count!
 
 echo %slot_num%
 
-if "%slot_num%"=="0" (echo "No Power ON slot, Do notting"
+if "%slot_num%"=="0" (echo "No Power ON slot, Do notting")
 
 :: 如果想覆蓋透過 (raw 0x3C 0x31) 取得的數量
 :: 直接改下面的數字就可以了，
