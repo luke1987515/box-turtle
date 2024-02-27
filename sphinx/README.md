@@ -2,6 +2,10 @@
 
 ## 如何使用
 
+### 清除舊資料
+
+`make clean`
+
 ### 產出 html
 
 `make html`
