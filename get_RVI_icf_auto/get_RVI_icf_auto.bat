@@ -77,7 +77,7 @@ for /f "skip=1 tokens=1,2,3,4,5* " %%i in (diskdrive.txt) do (
 		    ::echo !a:~1! !formattedValue:~0,20! %%i 
 		    ::set "line[!a:~1!]=%%j %%i !b! ^(!formattedValue:~0,20! //for TOSHIBA
 		    ::set "line[!a:~1!]=%%j %%i !b! ^( !formattedValue:~0,20! //for SEAGATE-ST1000NX0313
-		    set "line[!a:~1!]=%%j %%i !b! ^( !formattedValue:~0,20!
+		    set "line[!a:~1!]=%%j %%i !b! ^(!formattedValue:~0,20! 
 		)else if %%l==ATA (
 			set b=SATA_6K
             set "line[!a:~1!]=%%j %%i !b! !formattedValue:~0,20!
@@ -177,7 +177,7 @@ echo ################
 set "myfile=disksort.tmp"
 set "outputfile=disksort.txt"
 
-for /f "tokens=*" %%a in ('type "%myfile%" ^| find /v /n "" ^& break ^> "%myfile%"') do (
+for /f "tokens=* " %%a in ('type "%myfile%" ^| find /v /n "" ^& break ^> "%myfile%"') do (
      set "str=%%a
      set "str=!str:]= !"
 	 set "str=!str:[=!"
@@ -200,9 +200,12 @@ for /f "tokens=1,2,3,4,5,6,7" %%i in (disksort.txt) do (
 	    )else (
 	        ::echo 33 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
 	        ::echo %%j,%%k,%%l,%%m, > !work!.tmp
-	)else (
-		::echo 44 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
-	    echo %%j,%%k,%%l,%%m %%n %%o, > !work!.tmp
+	)else if "%%n"=="WDC" (
+		    ::echo 44 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o", WDC need one more space between n and o
+			echo %%j,%%k,%%l,%%m %%n  %%o, > !work!.tmp
+	    )else (
+		    ::echo 55 i="%%i",j="%%j",k="%%k",l="%%l",m="%%m",n="%%n",o="%%o",
+	        echo %%j,%%k,%%l,%%m %%n %%o, > !work!.tmp
 	)
 )
 
