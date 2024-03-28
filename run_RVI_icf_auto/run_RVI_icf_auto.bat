@@ -142,7 +142,7 @@ if "%cnt_2%"=="0" if "%cnt%"=="0" (
 		echo OK - That do it  
 		echo ################
 		if exist IOmeter.exe (		
-		    for /L %%i in (1, 1, %cnt2%) do (
+		    for /L %%i in (1, 1, %cnt_2%) do (
 		        set "formattedValue=000000%%i"
 	            set FileName=!formattedValue:~-3!
                 echo !FileName!.icf running...
