@@ -67,7 +67,7 @@ type diskdrive.tmp > diskdrive.txt
 
 for /f "skip=1 tokens=1,2,3,4,5* " %%i in (diskdrive.txt) do (
     set "formattedValue=%%l %%m %%n"
-	set /A a=100+%%j
+	set /A a=1000+%%j
         if "%%k"=="USB" (
             echo REMOVE %%j !formattedValue:~0,20! %%i -- THIS IS USB DISK
         )else (
@@ -364,11 +364,11 @@ echo.
 echo "DiskNum"="%DiskNum%"
 
 ::set DiskNum=23
-set FileName=00
+set FileName=000
 
 for /L %%i in (1, 1, %DiskNum%) do (
     set "formattedValue=000000%%i"
-	set FileName=!formattedValue:~-2!
+	set FileName=!formattedValue:~-3!
 	cls
     echo !FileName!.icf
     for /f "tokens=1,2,3,4 delims=," %%a in (%%i.tmp) do (
