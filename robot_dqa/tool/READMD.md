@@ -18,8 +18,14 @@ choco install vscode
 python -m pip install --upgrade pip
 ```
 # pip upgrade all
+Windows
 ```
 pip freeze | %{$_.split('==')[0]} | %{pip install --upgrade $_}
+```
+linux
+```
+pip --disable-pip-version-check list --outdated --format=json | python -c "import json, sys; print('\n'.join([x['name'] for x in json.load(sys.stdin)]))" | xargs -n1 pip install -U
+
 ```
 
 # Install 
