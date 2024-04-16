@@ -12,6 +12,8 @@ ${URL}          https://192.168.11.11/
 ${USERNAME}     admin
 ${PASSWORD}     admin123
 ${EXPECTED_TITLE}    AIC BMC System
+${expected_alert_message_1}    Click OK if you want to continue resetting the user's password.
+${expected_alert_message_2}    Unable to reset the Password for the User. Please try again later
 
 *** Test Cases ***
 6.2.1 Login Page function check
@@ -53,8 +55,22 @@ ${EXPECTED_TITLE}    AIC BMC System
     Page Should Contain    Login Failed
     sleep    2
     Click Link    id=forgot-password
-    sleep    1
-    Handle Alert    action=ACCEPT
+    # 獲取警示框中的文字 "Click OK if you want to continue resetting the user's password."
+    ${alert_message}=    Handle Alert
+    Should Be Equal As Strings    ${alert_message}   ${expected_alert_message_1}
+    # sleep    5
+    # 等待警示框彈出
+    # Wait Until Alert Is Present
+    # 點選 OK
+    # Handle Alert    action=ACCEPT
+    # sleep    5
+    # 獲取警示框中的文字
+    ${alert_message}=    Handle Alert
+    # 比對警示框中的文字是否符合預期 "Unable to reset the Password for the User. Please try again later"
+    Should Be Equal As Strings    ${alert_message}   ${expected_alert_message_2}
+    # sleep    5
+    # 點選 OK	
+    # Handle Alert    action=ACCEPT
     sleep    1   
     Capture Page Screenshot
     [Teardown]    Close Window
