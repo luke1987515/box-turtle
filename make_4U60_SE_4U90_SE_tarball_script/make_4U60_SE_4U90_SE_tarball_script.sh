@@ -91,7 +91,7 @@ else
   echo "Not found !! "
   mfg=no
 fi
-if [ "$fw" = "yes" ]; then
+if [ "$fw" == "yes" ]; then
   ORGFW1=`ls -l $ORGfolder|grep fw$HUBVER|awk '{print $NF}'|cut -d_ -f1`
   ORGFW2=`ls -l $ORGfolder|grep fw$HUBVER|awk '{print $NF}'|cut -d_ -f2-`
   NEWFW1=`echo "$ORGFW1"_Hub`
