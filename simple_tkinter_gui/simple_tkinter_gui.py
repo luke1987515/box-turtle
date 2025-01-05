@@ -3,7 +3,10 @@ from tkinter import ttk
 
 # 建立主視窗
 window = tk.Tk()
-window.title("多語言 Tkinter 範例")
+window_titles = {
+    "中文": "多語言 Tkinter 範例",
+    "English": "Multi-language Tkinter Example",
+}
 window.geometry("400x300")  # 設定視窗大小
 
 # 預設語言
@@ -67,6 +70,7 @@ def on_language_change(event):
     update_tab_titles()
     update_main_tab()
     update_about_tab()
+    update_window_title()  # 更新視窗標題
 
 # 語言選擇下拉選單
 language_var = tk.StringVar(value=current_language)
@@ -98,12 +102,18 @@ def update_tab_titles():
     notebook.tab(1, text=titles[1])  # 更新「語言」標題
     notebook.tab(2, text=titles[2])  # 更新「關於」標題
 
+
+def update_window_title():
+    """根據語言更新視窗標題"""
+    window.title(window_titles[current_language])
+
 # -----------------------
 # 初始化
 # -----------------------
 update_main_tab()
 update_about_tab()
 update_tab_titles()
+update_window_title()  # 新增這一行
 
 # 啟動主事件迴圈
 window.mainloop()
