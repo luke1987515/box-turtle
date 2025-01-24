@@ -17,6 +17,8 @@ python-docx 無法完整地把 word 檔轉換到 json ，所以也無法從 json
 讓 python 產出 Word 檔。再合併到先有的 Word 檔之中。
 
 
+ChatGPT 討論串
+https://chatgpt.com/share/679354a8-940c-8000-99a0-dae57a0feda6
 
 要記得安裝 python-docx
 ```
