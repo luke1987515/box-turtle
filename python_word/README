@@ -1,0 +1,51 @@
+小專案(python-word) --- 失敗
+
+使用 python 產生 Word 檔
+
+
+* 結果：
+* 
+* `使用 ChatGPT 做了一些嘗試，如這個資料夾裡的內容。
+python-docx 無法完整地把 word 檔轉換到 json ，所以也無法從 json 轉換成 word。`
+* 嘗試的 git 如下面的路徑
+* [https://github.com/luke1987515/box-turtle/tree/master/python_word](https://github.com/luke1987515/box-turtle/tree/master/python_word)
+
+如果是簡單的 word 檔，是可以轉換。
+但是當 Word 檔之中有，圖片、頁首、頁尾，就無法處理。上述的 圖片、頁首、頁尾 都會丟失。
+
+下一步，應該是自訂一個較簡單的格式。
+讓 python 產出 Word 檔。再合併到先有的 Word 檔之中。
+
+
+
+要記得安裝 python-docx
+```
+pip install python-docx
+```
+
+
+使用 python 執行檔名就可以動作
+`python generate_word.py`
+
+generate_word.py
+```
+import datetime
+from docx import Document
+
+# 建立 Word 文件
+doc = Document()
+doc.add_heading('自動化產生的 Word 文件', level=1)
+doc.add_paragraph('這是第一段文字內容。')
+doc.add_paragraph('這是第二段，還可以加入樣式。', style='Intense Quote')
+
+# 動態產生檔名（加上日期時間）
+timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+filename = f"自動化文件_{timestamp}.docx"
+
+# 儲存文件
+doc.save(filename)
+print(f"文件已儲存為：{filename}")
+
+```
+
+
