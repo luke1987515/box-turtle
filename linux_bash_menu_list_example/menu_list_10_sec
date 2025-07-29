@@ -1,0 +1,38 @@
+#!/bin/bash
+# Bash Menu Script with 10-second timeout fallback to Option 1
+ 
+options=("Option 1" "Option 2" "Option 3" "Quit")
+ 
+echo "Please choose an option:"
+for i in "${!options[@]}"; do
+    printf "%d) %s\n" $((i + 1)) "${options[$i]}"
+done
+ 
+# 使用 read -t 實作 timeout 輸入
+read -t 10 -p "Enter your choice [1-${#options[@]}] (auto-select 1 after 10s): " choice
+ 
+# 若逾時或輸入無效，自動執行選項 1
+if [[ -z "$choice" ]]; then
+    echo -e "\nNo input detected. Defaulting to Option 1..."
+    choice=1
+elif ! [[ "$choice" =~ ^[1-9][0-9]*$ ]] || (( choice < 1 || choice > ${#options[@]} )); then
+    echo -e "\nInvalid input. Defaulting to Option 1..."
+    choice=1
+fi
+ 
+# 根據選擇執行對應動作
+case $choice in
+    1)
+        echo "you chose choice 1"
+        source menu_list
+        ;;
+    2)
+        echo "you chose choice 2"
+        ;;
+    3)
+        echo "you chose choice $choice which is ${options[$((choice-1))]}"
+        ;;
+    4)
+        echo "Exiting..."
+        ;;
+esac
