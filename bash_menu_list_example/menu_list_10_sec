@@ -1,0 +1,63 @@
+#!/bin/bash
+# Bash Menu Script with 10-second timeout fallback to Option 1
+ 
+options=("Get_OS_Version(Win Bat)" \
+"Check_Browser_Versions(Win Bat)" \
+"Set_BMC_Time(Win Bat)" \
+"Scsi_Device_Scan_1.0.3(Win Bat)" \
+"Change_Bmc_Password(Win Bat)" \
+"Option 3" \
+"Quit")
+
+
+while true; do
+    # 顯示選單
+    echo "Please choose an option:"
+    for i in "${!options[@]}"; do
+        printf "%d) %s\n" $((i + 1)) "${options[$i]}"
+    done
+ 
+	# 使用 read -t 實作 timeout 輸入
+	read -t 10 -p "Enter your choice [1-${#options[@]}] (auto-select 1 after 10s): " choice
+	 
+	# 若逾時或輸入無效，自動執行選項 1
+	if [[ -z "$choice" ]]; then
+		echo -e "\nNo input detected. Defaulting to Option 1..."
+		choice=1
+	elif ! [[ "$choice" =~ ^[1-9][0-9]*$ ]] || (( choice < 1 || choice > ${#options[@]} )); then
+		echo -e "\nInvalid input. Defaulting to Option 1..."
+		choice=1
+	fi
+	 
+	# 根據選擇執行對應動作
+	case $choice in
+		1)
+			echo "you chose choice $choice which is ${options[$((choice-1))]}"
+			./Get_OS_Version.bat
+			;;
+		2)
+			echo "you chose choice $choice which is ${options[$((choice-1))]}"
+			./Check_Browser_Versions.bat
+			;;
+		3)
+			echo "you chose choice $choice which is ${options[$((choice-1))]}"
+			./Set_BMC_Time.bat
+			;;
+		4)
+			echo "you chose choice $choice which is ${options[$((choice-1))]}"
+			./Scsi_Device_Scan_1.0.3.bat
+			;;
+		5)
+			echo "you chose choice $choice which is ${options[$((choice-1))]}"
+			./Change_Bmc_Password.bat
+			;;
+		6)
+			echo "you chose choice $choice which is ${options[$((choice-1))]}"
+			source menu_list
+			;;
+		7)
+			echo "Exiting..."
+			break
+			;;
+	esac
+done
