@@ -7,7 +7,7 @@ SGSES="/usr/bin/sg_ses"
 LEDCTL="/usr/sbin/ledctl"
 
 echo "================================================================================"
-echo "      伺服器硬碟 LED 測試工具 v10.4 (Refactored Logic)"
+echo "      伺服器硬碟 LED 測試工具 v10.4 (Integrated ledctl)"
 echo "================================================================================"
 
 # --- 環境動態掃描 ---
@@ -71,11 +71,26 @@ find_by_sgses() {
     return 1
 }
 
-# 保持相容性的封裝 (供批次自動測試使用)
+# --- 拆分後的邏輯 3：ledctl 尋找 ---
+find_by_ledctl() {
+    local TARGET_DEV=$1
+    if [ -f "$LEDCTL" ] && [ -b "/dev/$TARGET_DEV" ]; then
+        echo "LEDCTL|/dev/$TARGET_DEV|$LEDCTL locate=/dev/$TARGET_DEV|$LEDCTL off=/dev/$TARGET_DEV"
+        return 0
+    fi
+    return 1
+}
+
+# 最佳命令判斷封裝
 find_best_cmd() {
     local RESULT
+    # 1. 優先試用 StorCLI
     RESULT=$(find_by_storcli "$1") && { echo "$RESULT"; return; }
+    # 2. 嘗試 sg_ses
     RESULT=$(find_by_sgses "$1") && { echo "$RESULT"; return; }
+    # 3. 嘗試 ledctl
+    RESULT=$(find_by_ledctl "$1") && { echo "$RESULT"; return; }
+    
     echo "NONE"
 }
 
@@ -141,10 +156,9 @@ while true; do
                     [ $? -eq 0 ] && IFS='|' read -r TYPE ADDR CMD_ON CMD_OFF <<< "$RES" && MATCHED=true
                     ;;
                 3)
-                    ADDR="ledctl"
-                    CMD_ON="$LEDCTL locate=/dev/$DEV"
-                    CMD_OFF="$LEDCTL off=/dev/$DEV"
-                    MATCHED=true ;;
+                    RES=$(find_by_ledctl "$DEV")
+                    [ $? -eq 0 ] && IFS='|' read -r TYPE ADDR CMD_ON CMD_OFF <<< "$RES" && MATCHED=true
+                    ;;
             esac
 
             if [ "$MATCHED" = true ]; then
@@ -155,7 +169,7 @@ while true; do
                 $CMD_OFF >/dev/null 2>&1
                 echo ">> 已熄燈。"
             else
-                echo "!! 匹配失敗。請確認該硬碟是否在該模式的控制範圍內。"
+                echo "!! 匹配失敗。請確認工具是否安裝或該硬碟是否支援該模式。"
             fi
             ;;
     esac
