@@ -1,0 +1,25 @@
+腳本
+
+fio_EMI.sh
+全部的硬碟自動順序讀，會有yes/no選單要你輸入確認
+
+
+fio_EMI_2.sh
+除了順位第一顆(lsblk上第一顆)，全部的硬碟自動順序讀，5秒後直接開始跑
+
+fio_new_CH.sh
+可指定哪顆不跑(系統碟)，參數半自動選擇，中文版
+
+fio_new_CH_log.sh
+可指定哪顆不跑(系統碟)，參數半自動選擇，中文版，會存LOG
+
+fio_new_EN.sh
+可指定哪顆不跑(系統碟)，參數半自動選擇，英文版
+
+read : Sequential reads. (循序讀)
+write : Sequential writes. (循序寫)
+randread : Random reads. (隨機讀)
+randwrite : Random writes. (隨機寫)
+rw : Mixed sequential reads and writes. (循序讀寫)
+readwrite : Sequential read and write mix (循序混合讀寫)
+randrw : Mixed random reads and writes. (隨機讀寫)
