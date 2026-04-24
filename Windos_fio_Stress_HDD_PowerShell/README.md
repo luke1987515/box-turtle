@@ -12,7 +12,7 @@
 1. **安裝 fio**: 
    請確保已安裝 `fio` 並加入系統路徑。
    ```powershell
-   winget install bsherman.fio
+   winget install fio
    ```
 管理員權限:
 此腳本需要存取實體磁碟路徑 \\.\PhysicalDrive，必須以 系統管理員身份 執行 PowerShell。
