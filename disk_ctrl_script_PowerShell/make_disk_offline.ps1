@@ -1,0 +1,13 @@
+# 1. 取得所有不是系統碟 (IsSystem = False) 且目前在線上的磁碟
+$targetDisks = Get-Disk | Where-Object { $_.IsSystem -eq $false -and $_.OperationalStatus -eq 'Online' } | Sort-Object Number
+
+# 2. 執行離線動作
+if ($targetDisks) {
+    $targetDisks | ForEach-Object {
+        Write-Host "正在將磁碟 $($_.Number) ($($_.FriendlyName)) 設為離線..." -ForegroundColor Cyan
+        Set-Disk -Number $_.Number -IsOffline $true
+    }
+    Write-Host "操作完成。" -ForegroundColor Green
+} else {
+    Write-Host "沒有找到需要離線的非系統磁碟。" -ForegroundColor Yellow
+}

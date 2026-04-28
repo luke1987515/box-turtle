@@ -1,0 +1,25 @@
+# 1. 取得所有非系統磁碟 (IsSystem = $false)
+$targetDisks = Get-Disk | Where-Object { $_.IsSystem -eq $false } | Sort-Object Number
+
+foreach ($disk in $targetDisks) {
+    Write-Host "--------------------------------------------------" -ForegroundColor Gray
+    Write-Host "正在處理磁碟編號: $($disk.Number) ($($disk.FriendlyName))" -ForegroundColor Cyan
+    
+    # 確保磁碟處於連線狀態，否則 Clear-Disk 可能會失敗
+    Set-Disk -Number $disk.Number -IsOffline $false
+    
+    # 2. 清除磁碟資訊 (-RemoveData 會清除分割區，-RemoveOEM 會清除隱藏分割)
+    Write-Host "正在清除磁碟內容 (Clear-Disk)..."
+    Clear-Disk -Number $disk.Number -RemoveData -RemoveOEM -Confirm:$false
+    
+    # 3. 初始化磁碟為 MBR (注意：超過 2TB 的空間將無法使用)
+    Write-Host "正在初始化為 MBR 格式..."
+    Initialize-Disk -Number $disk.Number -PartitionStyle MBR
+    
+    # 4. 確保磁碟狀態為 Online
+    Set-Disk -Number $disk.Number -IsOffline $false
+    
+    Write-Host "磁碟 $($disk.Number) 處理完成。" -ForegroundColor Green
+}
+
+Write-Host "`n所有非系統磁碟已重置完成。" -ForegroundColor White -BackgroundColor DarkGreen
