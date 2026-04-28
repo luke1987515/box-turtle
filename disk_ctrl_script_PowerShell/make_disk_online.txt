@@ -1,5 +1,5 @@
 # 1. 取得所有非系統磁碟 (IsSystem = $false)
-$targetDisks = Get-Disk | Where-Object { $_.IsSystem -eq $false }
+$targetDisks = Get-Disk | Where-Object { $_.IsSystem -eq $false } | Where-Object -FilterScript {$_.Bustype -ne "USB"} | Sort-Object Number
 
 foreach ($disk in $targetDisks) {
     Write-Host "--------------------------------------------------" -ForegroundColor Gray
