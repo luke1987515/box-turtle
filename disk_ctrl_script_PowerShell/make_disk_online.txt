@@ -7,8 +7,13 @@ foreach ($disk in $targetDisks) {
     
     # 1. 解除唯讀並將磁碟連線
     # 確保磁碟處於連線狀態，必須先有寫入權限且在線，後續動作才能成功
-    Write-Host "正在設定磁碟為讀寫模式並連線..."
-    Set-Disk -Number $disk.Number -IsReadOnly $false -IsOffline $false
+    # 步驟 1-1：先解除唯讀
+    Write-Host "正在解除唯讀狀態..."
+    Set-Disk -Number $disk.Number -IsReadOnly $false
+    
+    # 步驟 1-2：再設定為連線
+    Write-Host "正在將磁碟連線..."
+    Set-Disk -Number $disk.Number -IsOffline $false
     
     # 2. 檢查磁碟是否需要清除
     # 使用 if 判斷可以避免掉你之前遇到的 "磁碟未初始化" 報錯
