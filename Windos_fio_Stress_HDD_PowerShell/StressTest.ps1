@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # 1. 取得所有非系統磁碟 (排除 OS 碟且狀態為 Online)
-$nonOSDrives = Get-Disk | Where-Object { $_.IsSystem -eq $false -and $_.OperationalStatus -eq 'Online' }
+$nonOSDrives = Get-Disk | Where-Object { $_.IsSystem -eq $false -and $_.OperationalStatus -eq 'Online' } | Sort-Object Number
 
 if ($null -eq $nonOSDrives) {
     Write-Host "`n [!] 錯誤：找不到任何可供測試的非系統磁碟。" -ForegroundColor Red
