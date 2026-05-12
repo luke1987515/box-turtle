@@ -103,6 +103,14 @@ case "$mode" in
                 read -p "請輸入起始編號：" start
                 read -p "請輸入結束編號：" end
                 selected_disks=("${disks[@]:$start:$(($end - $start + 1))}")
+                                
+                # 詢問跑完後是否要關機
+                echo "🖥️ 跑完測試後的動作？"
+                echo "1️⃣ 跑完測試後待機 180 秒再關機"
+                echo "2️⃣ 跑完測試後維持開機"
+                read -p "請輸入選項 (1/2)：" shutdown_choice
+                [[ "$shutdown_choice" != "1" && "$shutdown_choice" != "2" ]] && { echo "❌ 無效選項"; exit 1; }
+                                
                 ;;
             *)
                 echo "❌ 無效子選項"; exit 1;;
@@ -273,12 +281,18 @@ mv "$summary_file" "RVI_LOG_${timestamp}/"
 echo "📦 所有結果已匯出至資料夾：RVI_LOG_${timestamp}/"
 
 # 結束動作
-if [[ "$mode" == "1" && "$submode" == "a" ]]; then
+if [[ "$mode" == "1" && ("$submode" == "a" || "$submode" == "c") ]]; then
     if [[ "$shutdown_choice" == "1" ]]; then
         echo "⏳ 測試完成，系統將於 180 秒後自動關機..."
+        sleep 180
+        echo "ipmitool -I lanplus -H 192.168.15.74 -U admin -P admin123 power off"
+        ipmitool -I lanplus -H 192.168.15.74 -U admin -P admin123 power off
+        echo "ipmitool -I lanplus -H 192.168.15.75 -U admin -P admin123 power off"
+        ipmitool -I lanplus -H 192.168.15.75 -U admin -P admin123 power off
         sleep 180
         shutdown -h now
     else
         echo "✅ 測試完成，系統維持開機狀態"
     fi
 fi
+
