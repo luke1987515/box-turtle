@@ -58,10 +58,13 @@ cat << EOF > $CFG_FILE
 [global]
 ioengine=libaio
 direct=1
-rw=write
-bs=512k
+#rw=write
+rw=read
+#bs=512k
+bs=4k
 numjobs=1
-iodepth=4
+#iodepth=4
+iodepth=1
 runtime=$TEST_TIME
 time_based
 group_reporting
