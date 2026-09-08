@@ -1,7 +1,16 @@
 #!/bin/bash
 
-# 0. 自動建立存放 Log 的資料夾
-LOG_DIR="logs"
+# 捕捉 SIGINT (Ctrl+C) 訊號，發送 kill 0 徹底清除當前程序群組下的所有子程序後安全退出
+trap 'echo -e "\n[!] 偵測到 Ctrl+C，正在強制停止所有 dd 抹除程序..."; kill 0; exit 1' INT
+
+# 1. 預先取得 sudo 權限
+sudo -v || exit 1
+
+# 2. 自動在背景保持 sudo 權限，避免 dd 執行太久導致最後 smartctl 跳出密碼提示
+( while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) &
+
+# 0. 自動建立存放 Log 的資料夾並匯出變數 (解決 xargs 變數傳遞問題)
+export LOG_DIR="logs"
 mkdir -p "$LOG_DIR"
 
 # 1. 自動找出根目錄 `/` 所在的實體母硬碟名稱
@@ -55,7 +64,6 @@ read -p "抹除完成後是否自動關機？(Y/n): " AUTO_OFF
 echo "$TARGET_DISKS" | xargs -P 0 -I {} sh -c '
   dev="/dev/{}"
   name="{}"
-  log_dir="'"$LOG_DIR"'"
   
   # 抓取硬碟型號與序號 (SN)
   model=$(lsblk -d -no MODEL "$dev" | xargs)
@@ -79,7 +87,7 @@ echo "$TARGET_DISKS" | xargs -P 0 -I {} sh -c '
   fi
 
   # 組合包含硬碟代號、型號與 SN 的日誌檔名
-  log_file="${log_dir}/dd_output_${name}_${model_safe}_${sn_safe}_bs_4M.log"
+  log_file="${LOG_DIR}/dd_output_${name}_${model_safe}_${sn_safe}_bs_4M.log"
 
   echo "開始抹除 $dev (型號: $model_display, SN: $sn_display) ..."
 
