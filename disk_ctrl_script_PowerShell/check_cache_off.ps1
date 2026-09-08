@@ -8,8 +8,13 @@ if (Test-Path $dskcachePath) {
     return
 }
 
-# 2. 取得所有非系統磁碟，依編號排序
-$targetDisks = Get-Disk | Where-Object { $_.IsSystem -eq $false } | Sort-Object Number
+# 2. 取得所有非系統磁碟，並自動排除 AMI / Virtual 相關虛擬裝置，依編號排序
+$targetDisks = Get-Disk | Where-Object { 
+    $_.IsSystem -eq $false -and
+    $_.FriendlyName -notlike "*AMI Virtual*" -and
+    $_.FriendlyName -notlike "*Virtual Disk*" -and
+    $_.Model -notlike "*AMI Virtual*"
+} | Sort-Object Number
 
 Write-Host "開始檢查磁碟 Write Cache 狀態..." -ForegroundColor Yellow
 Write-Host "目標狀態：Write Cache is disabled`n" -ForegroundColor White

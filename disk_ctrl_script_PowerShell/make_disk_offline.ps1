@@ -1,5 +1,11 @@
-# 1. 取得所有不是系統碟 (IsSystem = False) 且目前在線上的磁碟
-$targetDisks = Get-Disk | Where-Object { $_.IsSystem -eq $false -and $_.OperationalStatus -eq 'Online' } | Sort-Object Number
+# 1. 取得所有不是系統碟 (IsSystem = False) 且目前在線上的實體磁碟 (自動排除虛擬裝置)
+$targetDisks = Get-Disk | Where-Object { 
+    $_.IsSystem -eq $false -and 
+    $_.OperationalStatus -eq 'Online' -and
+    $_.FriendlyName -notlike "*AMI Virtual*" -and
+    $_.FriendlyName -notlike "*Virtual Disk*" -and
+    $_.Model -notlike "*AMI Virtual*"
+} | Sort-Object Number
 
 # 2. 執行離線動作
 if ($targetDisks) {

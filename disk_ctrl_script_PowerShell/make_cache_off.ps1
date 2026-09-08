@@ -8,12 +8,17 @@ if (Test-Path $dskcachePath) {
     return
 }
 
-# 1. 取得非系統磁碟
-$targetDisks = Get-Disk | Where-Object { $_.IsSystem -eq $false } | Sort-Object Number
+# 1. 取得非系統磁碟，並自動排除 AMI / Virtual 相關虛擬裝置
+$targetDisks = Get-Disk | Where-Object { 
+    $_.IsSystem -eq $false -and
+    $_.FriendlyName -notlike "*AMI Virtual*" -and
+    $_.FriendlyName -notlike "*Virtual Disk*" -and
+    $_.Model -notlike "*AMI Virtual*"
+} | Sort-Object Number
 
 foreach ($disk in $targetDisks) {
     $driveName = "PhysicalDrive$($disk.Number)"
-    Write-Host "正在設定 $driveName..." -ForegroundColor Cyan
+    Write-Host "正在設定 $driveName ($($disk.FriendlyName))..." -ForegroundColor Cyan
     
     # 使用 & 調用路徑變數執行
     & $dskcachePath -w $driveName
