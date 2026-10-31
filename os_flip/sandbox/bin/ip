@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Sandbox stub for `ip` (iproute2). Fakes two tables, keyed on $SB_STATE:
+#   - DUT   ($SB_DUT_IP, default 192.168.1.20, MAC 00:15:b2:aa:bb:01):
+#           in the neigh cache iff power=on AND relay is not cut
+#   - BMC   (127.0.0.1, MAC 00:15:b2:aa:bb:03): always in the cache (the BMC
+#           has independent power -- the E3 discovery path)
+#   - vendor(192.168.1.50, MAC 00:11:22:33:44:55): different OUI, always in
+#           the cache; must be filtered out by KNOWN_OUI
+# Same OUI (00:15:b2), MAC gap 2 = one 3-MAC board block.
+set -u
+STATE=${SB_STATE:-/tmp/sbstate}
+DUT=${SB_DUT_IP:-192.168.1.20}
+BOMAC=00:15:b2:aa:bb:01
+BMAC=00:15:b2:aa:bb:03
+dut_alive() {
+  [ -f "$STATE/power" ] && grep -q "^on$" "$STATE/power" || return 1
+  if [ -f "$STATE/relay" ] && grep -q "^off$" "$STATE/relay"; then return 1; fi
+  return 0
+}
+neigh_entries() {
+  # real `ip neigh show` line format: <ip> dev <dev> lladdr <mac> <state>
+  if dut_alive; then echo "$DUT dev eth0 lladdr $BOMAC REACHABLE"; fi
+  echo "127.0.0.1 dev eth0 lladdr $BMAC REACHABLE"
+  echo "192.168.1.50 dev eth0 lladdr 00:11:22:33:44:55 REACHABLE"
+}
+if [ "${1:-}" = "neigh" ] && [ "${2:-}" = "show" ]; then
+  if [ $# -ge 3 ]; then neigh_entries | awk -v w="$3" '$1 == w'; else neigh_entries; fi
+  exit 0
+fi
+if [ "${1:-}" = "-4" ] && [ "${2:-}" = "-o" ] && [ "${3:-}" = "addr" ]; then
+  echo "2: eth0    inet 192.168.1.103/24 brd 192.168.1.255 scope global eth0"
+  exit 0
+fi
+exit 0

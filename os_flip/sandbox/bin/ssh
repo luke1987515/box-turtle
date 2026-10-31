@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# Sandbox stub for ssh. Models the DUT's CURRENT booted OS ($SB_STATE/bootsed):
+# only the matching account authenticates. argv: ssh [opts] user@host command
+set -u
+STATE=${SB_STATE:-/tmp/sbstate}
+host_arg=${@: -2:1}
+cmd=${@: -1}
+os=$(cat "$STATE/bootsed" 2>/dev/null || echo windows)
+
+printf "%s's password: " "$host_arg"
+read -r _pw || true
+
+# --- hang simulation (case F): once SB_SSH_DIE_AFTER successful
+# connection(s) have happened, the DUT's SSH dies (OS hang). When a power
+# event occurs afterwards (forced off/on recovery), the machine is healthy
+# for the rest of the case.
+if [ -n "${SB_SSH_DIE_AFTER:-}" ] && [ ! -f "$STATE/hc_disabled" ]; then
+  pe=0
+  for f in power_on poweroff_at poweron_at reset_at; do
+    if [ -f "$STATE/$f" ]; then
+      t=$(cat "$STATE/$f" 2>/dev/null || echo 0)
+      [ "$t" -gt "$pe" ] && pe=$t
+    fi
+  done
+  les=$(cat "$STATE/last_event_seen" 2>/dev/null || echo 0)
+  cnt=$(cat "$STATE/conn_since_event" 2>/dev/null || echo 0)
+  if [ "$pe" -gt "$les" ] && [ "$cnt" -gt 0 ]; then
+    echo 0 > "$STATE/conn_since_event"
+    echo "$pe" > "$STATE/last_event_seen"
+    : > "$STATE/hc_disabled"
+  elif [ "$cnt" -ge "$SB_SSH_DIE_AFTER" ]; then
+    echo "ssh: connect to host $host_arg port 22: Connection timed out"
+    exit 255
+  fi
+fi
+
+case $host_arg in
+  Administrator@192.168.1.20)
+    if [ "$os" = "windows" ]; then
+      c=$(cat "$STATE/conn_since_event" 2>/dev/null || echo 0)
+      echo $((c + 1)) > "$STATE/conn_since_event"
+      case $cmd in
+        *SUDONOK77*)
+          echo "SUDONOK77";;
+        *shutdown*)
+          echo "stub: shutdown received"
+          # Synchronous power off: no background subshell -- a `&`/setsid
+          # grandchild is killed when pexpect tears down the pty (verified
+          # 2026-10-30: survives under script(1), dies under pexpect).
+          # Instant-off is state-machine-equivalent for the sandbox.
+          echo off > "$STATE/power"
+          rm -f "$STATE/boot_at"
+          date +%s > "$STATE/poweroff_at"
+          exit 0;;
+        *OSFLIPPROBE77*)
+          echo "WIN-SANDBOX"
+          echo "OSFLIPPROBE77";;
+        *WINCOLLECTDONE77*)
+          echo "WIN-SANDBOX"
+          echo "Microsoft Windows Server 2022 [Version 10.0.20348.5622] (sandbox)"
+          echo "=== systeminfo ==="
+          echo "Host Name:                 WIN-SANDBOX"
+          echo "OS Name:                   Microsoft Windows Server 2022 Standard"
+          echo "System Boot Time:          2026-10-29, 10:00:00"
+          echo "=== wmic diskdrive ==="
+          echo "Model                   SerialNumber    Size"
+          echo "PLEXTOR PX-128G5Se      PTXXXXXXXX      128034436608"
+          echo "=== wmic logicaldisk ==="
+          echo "Caption   FreeSpace     Size"
+          echo "C:        50000000000   127900000000"
+          echo "=== ipconfig /all ==="
+          echo "Ethernet adapter Ethernet0:"
+          echo "   IPv4 Address. . . . . . . . . . . : 192.168.1.20"
+          echo "WINCOLLECTDONE77";;
+        *)
+          echo "stub ssh: unhandled windows cmd";;
+      esac
+    else
+      echo "Permission denied, please try again."
+      echo "Administrator@192.168.1.20: Permission denied (password)."
+      exit 255
+    fi
+    ;;
+  dqa@192.168.1.20)
+    if [ "$os" = "ubuntu" ]; then
+      c=$(cat "$STATE/conn_since_event" 2>/dev/null || echo 0)
+      echo $((c + 1)) > "$STATE/conn_since_event"
+      case $cmd in
+        *SUDONOK77*)
+          echo "SUDONOK77";;
+        *sudo*shutdown*|*shutdown*)
+          echo "stub: shutdown received"
+          echo off > "$STATE/power"
+          rm -f "$STATE/boot_at"
+          date +%s > "$STATE/poweroff_at"
+          exit 0;;
+        *OSFLIPPROBE77*)
+          echo "dqa-sandbox"
+          echo "OSFLIPPROBE77";;
+        *UBCOLLECTDONE77*)
+          echo 'NAME="Ubuntu"'
+          echo 'VERSION="24.04.2 LTS (Noble Numbat)" (sandbox)'
+          echo "UB_OSREL_RC=0"
+          echo "Linux dqa-sandbox 6.8.0-40-generic #40-Ubuntu SMP x86_64 GNU/Linux"
+          echo "UB_UNAME_RC=0"
+          echo "CPU(s):                                  24"
+          echo "Model name:                              Intel(R) Xeon(R) (sandbox)"
+          echo "UB_LSCPU_RC=0"
+          echo "               total        used        free"
+          echo "Mem:            31Gi       2.1Gi       28Gi"
+          echo "UB_FREE_RC=0"
+          echo "NAME MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT FSTYPE"
+          echo "sda    8:0    0  119G  0 disk             -"
+          echo "sda3   8:3    0   50G  0 part /windows   ntfs"
+          echo "sda4   8:4    0   60G  0 part /          ext4"
+          echo "UB_LSBLK_RC=0"
+          echo "00:01.0 VGA compatible controller: (sandbox)"
+          echo "UB_LSPCI_RC=0"
+          echo "lo       UNKNOWN        127.0.0.1/8"
+          echo "enp1s0   UP             192.168.1.20/24"
+          echo "UB_IP_RC=0"
+          echo "Filesystem Size Used Avail Use% Mounted on"
+          echo "/dev/sda4   118G   20G   98G  17% /"
+          echo "UB_DF_RC=0"
+          echo " 10:00:00 up 1 day,  2 users,  load average: 0.10"
+          echo "UB_UPTIME_RC=0"
+          if [ -n "${SB_COLLECT_FAIL:-}" ]; then
+            # simulate a collect that never finishes: no marker, stay alive
+            sleep 300
+            exit 255
+          fi
+          echo "UBCOLLECTDONE77";;
+        *)
+          echo "stub ssh: unhandled ubuntu cmd"
+          exit 255;;
+      esac
+    else
+      echo "Permission denied, please try again."
+      echo "dqa@192.168.1.20: Permission denied (password)."
+      exit 255
+    fi
+    ;;
+  *)
+    echo "ssh: connect to host $host_arg port 22: No route to host"
+    exit 255;;
+esac

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Sandbox stub for ping. The DUT ($SB_DUT_IP, default 192.168.1.20) is UP iff
+# power is on AND the relay is not cut AND boot_at exists (boot complete).
+# Power off (shutdown/forced off) keeps the DUT dead even if a stale boot_at
+# exists; a relay cut kills the DUT too (its PCBA domain).
+set -u
+STATE=${SB_STATE:-/tmp/sbstate}
+host=${@: -1}
+DUT=${SB_DUT_IP:-192.168.1.20}
+case $host in
+  $DUT)
+    [ -f "$STATE/boot_at" ] || exit 1
+    if [ -f "$STATE/power" ] && grep -q "^off$" "$STATE/power"; then exit 1; fi
+    if [ -f "$STATE/relay" ] && grep -q "^off$" "$STATE/relay"; then exit 1; fi
+    exit 0;;
+  *)
+    exit 0;;
+esac
