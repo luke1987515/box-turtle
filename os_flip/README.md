@@ -9,6 +9,16 @@ The one-shot override never touches the **persistent** boot order; each cycle
 consumes its override, so the run ends on the last booted OS with the
 persistent order unchanged.
 
+## Provenance
+
+Designed and validated by **luke1987515**; developed with the assistance of an
+AI agent (**Hermes Agent** by Nous Research; self-hosted **Qwen3.8-27B**
+model — earlier development sessions may have used other models).
+
+Verified before publishing: sandbox **8/8** test cases + real-hardware
+**10/10** cycle PASS run on **2026-11-01** (FAIL_COUNT=0; persistent boot
+order unchanged; machine left on the last booted OS).
+
 ## How a cycle works
 
 ```

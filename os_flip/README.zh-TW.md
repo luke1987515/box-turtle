@@ -7,6 +7,14 @@
 一次性 override **不碰持久開機順序**：每圈消耗自己的 override，全場結束時
 機器停在最後開出的 OS、持久順序維持不變。
 
+## Provenance（出處）
+
+由 **luke1987515** 設計並驗證；以 AI agent（Nous Research 的 **Hermes Agent**；
+self-hosted **Qwen3.8-27B** 模型——早期開發 session 可能使用其他模型）輔助開發。
+
+公開前已驗證：sandbox **8/8** 測試案例 + 實機 **10/10** 圈 PASS（**2026-11-01**，
+FAIL_COUNT=0；持久開機順序未動；機器停在最後開出的 OS）。
+
 ## 每圈的動作
 
 ```
