@@ -381,21 +381,22 @@ relay_fingerprint() {
   # wait for it to return and power the system on if it stayed off.
   if [ -n "$B_IP" ]; then
     log "waiting for BMC $B_IP to come back (180s budget) ..."
-    local bmc_up=0 pstat t0 now
+    local bmc_up=0 praw="" pstat t0 now
     t0=$(date +%s)
     while :; do
       now=$(date +%s)
       if [ $((now - t0)) -ge 180 ]; then log "WARN: BMC $B_IP not back within 180s"; break; fi
-      # BMCs (e.g. AMI MegaRAC) may block ICMP yet answer IPMI -- probe via
-      # IPMI (a ping liveness check would never see the real BMC come back)
-      if ipmi_try "$B_IP" mc info >/dev/null 2>&1; then bmc_up=1; log "BMC $B_IP is back"; break; fi
+      # BMCs (e.g. AMI MegaRAC) block ICMP but answer IPMI -- a ping
+      # liveness check would never see the real BMC come back. Probe with
+      # 'chassis power status': the power-state parse below reuses this
+      # output, so one query serves both roles.
+      praw=$(ipmi_try "$B_IP" chassis power status 2>/dev/null)
+      if [ -n "$praw" ]; then bmc_up=1; log "BMC $B_IP is back"; break; fi
       sleep 3
     done
     if [ "$bmc_up" -eq 1 ]; then
       # real ipmitool prints "Chassis Power is on/off" (no colon -- that
       # format is chassis *status*, not power status)
-      local praw
-      praw=$(ipmi_try "$B_IP" chassis power status 2>/dev/null)
       case "$praw" in
         *"is on"*)  pstat=on ;;
         *"is off"*) pstat=off ;;
