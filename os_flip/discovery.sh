@@ -25,9 +25,14 @@
 #       passes the default-credential IPMI probe is the BMC, otherwise the
 #       vanished MAC was the BMC and the neighbor is the DUT
 #   E4  relay channel safety        -> only the two user-provided commands
-#       are ever executed; nothing is guessed
+#       are ever executed; nothing is guessed; an EXIT/RETURN trap restores
+#       the relay if the script dies with it still cut (covers the E2 early
+#       return, which used to leave the relay off)
 #   E5  mixed L2 segments           -> DUT_NET (default: runner's /24) stays
 #       overridable
+#   E6  power-restore policy        -> after the relay restore, if a BMC was
+#       identified and the system is still OFF (e.g. an always-off policy),
+#       it is powered on via BMC; auto-restore policies are left alone
 #
 # Usage:
 #   ./discovery.sh --auto      # called by os_flip.sh: fill the gaps, write env
@@ -82,6 +87,7 @@ UBU_PASS=${UBU_PASS:-}
 DUT_NET=${DUT_NET:-}
 RELAY_OFF_CMD=${RELAY_OFF_CMD:-}
 RELAY_ON_CMD=${RELAY_ON_CMD:-}
+RELAY_STATE=on     # "cut" while the relay is known to be off (trap-guarded)
 
 # load_env_file: fill only EMPTY variables from the env file (CLI wins).
 # Strict KEY=VALUE parsing -- the file is never sourced/executed.
@@ -152,6 +158,29 @@ ipmi_default_ok() {
 port22() {
   (exec 3<>"/dev/tcp/$1/22") 2>/dev/null && { exec 3>&-; return 0; } || return 1
 }
+
+# ipmi_try IP CMD...: IPMI with the best-known credentials -- site creds
+# (BMC_PASS) first if set, then the public vendor defaults. rc 0 = success.
+ipmi_try() {
+  local h=$1; shift
+  if [ -n "${BMC_PASS:-}" ]; then
+    timeout 15 ipmitool -I lanplus -H "$h" -U "${BMC_USER:-admin}" -P "$BMC_PASS" "$@" 2>/dev/null && return 0
+  fi
+  timeout 15 ipmitool -I lanplus -H "$h" -U "$BMC_DEFAULT_USER" -P "$BMC_DEFAULT_PASS" "$@" 2>/dev/null && return 0
+  return 1
+}
+
+# relay_safety_restore: trap handler -- if the script exits with the relay
+# still cut (E2 early return, Ctrl-C, any error path), restore it. No-op
+# unless RELAY_STATE=cut. Never fails the script.
+relay_safety_restore() {
+  [ "${RELAY_STATE:-on}" = "cut" ] || return 0
+  [ -n "${RELAY_ON_CMD:-}" ] || return 0
+  log "SAFETY: relay still cut at exit -- restoring: bash -c \"$RELAY_ON_CMD\""
+  bash -c "$RELAY_ON_CMD" >/dev/null 2>&1 || log "SAFETY: restore command failed -- restore the relay MANUALLY"
+  RELAY_STATE=on
+}
+trap relay_safety_restore EXIT
 
 # group MACs into same-board blocks (same OUI, consecutive tail, gap <= gap).
 # input: newline MACs on stdin; output: one "mac,mac[,mac]" block per line.
@@ -278,10 +307,11 @@ relay_fingerprint() {
   # t1/t2 are deliberately GLOBAL: the RETURN trap fires in the caller's
   # scope, where function locals have already vanished (set -u would bite)
   t1=$(mktemp); t2=$(mktemp)
-  trap 'rm -f "$t1" "$t2" "$t1.mac" "$t2.mac"' RETURN
+  trap 'rm -f "$t1" "$t2" "$t1.mac" "$t2.mac"; relay_safety_restore' RETURN
   mac_sweep "$t1"
   log "cutting relay: bash -c \"$RELAY_OFF_CMD\" (a few seconds)"
   bash -c "$RELAY_OFF_CMD"
+  RELAY_STATE=cut
   sleep 6
   mac_sweep "$t2"
   awk '{print tolower($2)}' "$t1" | sort -u > "$t1.mac"
@@ -345,6 +375,32 @@ relay_fingerprint() {
   log "fingerprint result: DUT $D_IP ($D_MAC) | BMC $B_IP ($B_MAC)"
   log "restoring relay: bash -c \"$RELAY_ON_CMD\""
   bash -c "$RELAY_ON_CMD"
+  RELAY_STATE=on
+  # Post-restore recovery (E6): after a full AC loss the system may not come
+  # back on its own (Power Restore Policy: always-off). If a BMC is known,
+  # wait for it to return and power the system on if it stayed off.
+  if [ -n "$B_IP" ]; then
+    log "waiting for BMC $B_IP to come back (180s budget) ..."
+    local bmc_up=0 pstat t0 now
+    t0=$(date +%s)
+    while :; do
+      now=$(date +%s)
+      if [ $((now - t0)) -ge 180 ]; then log "WARN: BMC $B_IP not back within 180s"; break; fi
+      if ping -c1 -W1 "$B_IP" >/dev/null 2>&1; then bmc_up=1; log "BMC $B_IP is back"; break; fi
+      sleep 3
+    done
+    if [ "$bmc_up" -eq 1 ]; then
+      pstat=$(ipmi_try "$B_IP" chassis power status 2>/dev/null | awk -F': ' '{print tolower($2)}')
+      case "$pstat" in
+        off) log "system is OFF after AC loss -- powering on via BMC"
+             ipmi_try "$B_IP" chassis power on >/dev/null 2>&1 || \
+               log "WARN: BMC power on failed -- power the system on manually" ;;
+        on) log "system already ON (auto power-restore in effect)" ;;
+        "") log "WARN: could not query BMC power state (IPMI unreachable with known creds)" ;;
+        *) log "WARN: unexpected power state '$pstat' after restore" ;;
+      esac
+    fi
+  fi
   # wait for the DUT to come back (cold boot), then refresh its IP
   log "waiting for DUT $D_IP ping UP (180s budget) ..."
   local t0 now
