@@ -390,7 +390,15 @@ relay_fingerprint() {
       sleep 3
     done
     if [ "$bmc_up" -eq 1 ]; then
-      pstat=$(ipmi_try "$B_IP" chassis power status 2>/dev/null | awk -F': ' '{print tolower($2)}')
+      # real ipmitool prints "Chassis Power is on/off" (no colon -- that
+      # format is chassis *status*, not power status)
+      local praw
+      praw=$(ipmi_try "$B_IP" chassis power status 2>/dev/null)
+      case "$praw" in
+        *"is on"*)  pstat=on ;;
+        *"is off"*) pstat=off ;;
+        *)          pstat="" ;;
+      esac
       case "$pstat" in
         off) log "system is OFF after AC loss -- powering on via BMC"
              ipmi_try "$B_IP" chassis power on >/dev/null 2>&1 || \
