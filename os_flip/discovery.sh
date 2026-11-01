@@ -386,7 +386,9 @@ relay_fingerprint() {
     while :; do
       now=$(date +%s)
       if [ $((now - t0)) -ge 180 ]; then log "WARN: BMC $B_IP not back within 180s"; break; fi
-      if ping -c1 -W1 "$B_IP" >/dev/null 2>&1; then bmc_up=1; log "BMC $B_IP is back"; break; fi
+      # BMCs (e.g. AMI MegaRAC) may block ICMP yet answer IPMI -- probe via
+      # IPMI (a ping liveness check would never see the real BMC come back)
+      if ipmi_try "$B_IP" mc info >/dev/null 2>&1; then bmc_up=1; log "BMC $B_IP is back"; break; fi
       sleep 3
     done
     if [ "$bmc_up" -eq 1 ]; then
