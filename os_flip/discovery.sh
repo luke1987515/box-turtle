@@ -227,9 +227,12 @@ classify_board() {
   local dut_cand_ips=() dut_cand_macs=()
   while read -r ip mac; do
     [ -n "$ip" ] && [ -n "$mac" ] || continue
-    if ipmi_default_ok "$ip"; then
+    # ipmi_try = site creds (BMC_PASS) first, vendor defaults fallback --
+    # a real BMC may use non-default creds (admin123), and a default-cred
+    # check alone would file it under the DUT candidates
+    if ipmi_try "$ip" chassis power status >/dev/null; then
       B_IP=$ip; B_MAC=$mac
-      log "board: BMC identified by default-cred IPMI: $B_IP ($B_MAC)"
+      log "board: BMC identified by IPMI probe: $B_IP ($B_MAC)"
     else
       dut_cand_ips+=("$ip"); dut_cand_macs+=("$mac")
     fi
@@ -282,9 +285,9 @@ e3_single_board() {
     local nip nmac okn=0
     while read -r nip nmac; do
       [ -n "$nip" ] || continue
-      if ipmi_default_ok "$nip"; then
+      if ipmi_try "$nip" chassis power status >/dev/null; then
         B_IP=$nip; B_MAC=$nmac; D_IP=$lip; D_MAC=$lmac
-        log "E3: vanished $lmac = DUT; alive neighbor $B_IP ($B_MAC) passed default-cred IPMI = BMC"
+        log "E3: vanished $lmac = DUT; alive neighbor $B_IP ($B_MAC) passed IPMI probe = BMC"
         return 0
       fi
       okn=$((okn+1))
@@ -293,7 +296,7 @@ e3_single_board() {
       # vanished MAC must be the BMC; the alive neighbor is the DUT
       read -r D_IP D_MAC <<< "$neigh"
       B_IP=$lip; B_MAC=$lmac
-      log "E3: vanished $lmac = BMC; alive neighbor $D_IP ($D_MAC) = DUT (default creds rejected on all alive neighbors)"
+      log "E3: vanished $lmac = BMC; alive neighbor $D_IP ($D_MAC) = DUT (IPMI probe rejected on all alive neighbors)"
       return 0
     fi
   fi

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sandbox case runner. Usage: run_case.sh A|B|C|D|E|F|G|H
+# Sandbox case runner. Usage: run_case.sh A|B|C|D|E|F|G|H|I
 #   A = normal 2 cycles (win->ubuntu->windows), RESET mode (legacy)
 #   B = nav verify fail on DOWN 5 (no ENTER, safe exit, abort), RESET
 #   C = boot timeout after ENTER handoff (FAIL, abort), RESET
@@ -13,6 +13,9 @@
 #   H = discovery.sh E3 power-off fingerprint (relay ON->OFF->ON): DUT MAC
 #       vanishes, BMC survives (independent power); the fingerprint must
 #       identify DUT+BMC, restore the relay, and write the env file
+#   I = ac_cycle.sh full path with KNOWN identity (no fingerprint): precheck
+#       -> relay cut -> DUT confirmed down -> restore -> BMC IPMI probe ->
+#       power-state branch -> DUT ping UP -> PASS
 set -u
 CASE=${1:?case name A|B|C|D|E|F}
 ROOT=$(cd "$(dirname "$0")" && pwd)
@@ -50,6 +53,7 @@ case $CASE in
   G) export CYCLES=1 SHUTDOWN_MODE=clean SETUP_TIMEOUT=15 \
        SOL_PRE_POWERON_WAIT=1 SB_NOSUPE=1 ;;
   H) ;;
+  I) export AC_SETTLE=1 ;;
   *) echo "unknown case $CASE"; exit 2;;
 esac
 
@@ -72,6 +76,21 @@ if [ "$CASE" = "H" ]; then
   elif ! grep -q "^DUT_MAC=00:15:b2:aa:bb:01" "$ROOT/work_H/os_flip.env" 2>/dev/null \
        || ! grep -q "^BMC_IP=127.0.0.1" "$ROOT/work_H/os_flip.env" 2>/dev/null; then
     echo "CASE H: env file missing DUT_MAC/BMC_IP"
+    rc=1
+  fi
+elif [ "$CASE" = "I" ]; then
+  # ac_cycle.sh with KNOWN identity (the common section already sets
+  # DUT_IP/BMC_IP/creds); the stub relay file drives DUT death, the BMC
+  # (127.0.0.1) has independent power
+  export SB_DUT_IP=192.168.1.20
+  export DUT_MAC=00:15:b2:aa:bb:01
+  export RELAY_OFF_CMD="echo off > $SB_STATE/relay"
+  export RELAY_ON_CMD="echo on > $SB_STATE/relay"
+  echo on > "$SB_STATE/relay"
+  bash "$ROOT/ac_cycle.sh" | tee "$ROOT/work_I/ac_cycle.out"
+  rc=${PIPESTATUS[0]}
+  if [ $rc -ne 0 ] || ! grep -q "result=PASS" "$ROOT/work_I/ac_cycle.out"; then
+    echo "CASE I: ac_cycle failed or no PASS summary"
     rc=1
   fi
 else
