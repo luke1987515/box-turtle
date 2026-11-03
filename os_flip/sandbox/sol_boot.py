@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """sol_boot.py -- Boot Override one-shot OS switch via SOL pty (Aptio/AMI).
 
-Provenance: designed & validated by luke1987515; AI-assisted development
-(Hermes Agent by Nous Research; self-hosted Qwen3.8-27B). Verified on real
-hardware 2026-11-01: 10/10 cycles PASS, persistent boot order unchanged.
-
 Verified path (2026-10, reference dual-OS DUT):
   sol deactivate -> wait SOL_DEACT_WAIT (10s; the BMC SOL engine needs this
   gap before re-attach) -> chassis bootdev bios option=efiboot -> open SOL

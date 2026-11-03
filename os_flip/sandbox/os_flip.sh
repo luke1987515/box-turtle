@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 # os_flip.sh -- dual-OS Boot Override cycle test (one-shot UEFI boot switching).
 #
-# Provenance: designed & validated by luke1987515; AI-assisted development
-# (Hermes Agent by Nous Research; self-hosted Qwen3.8-27B). Verified on real
-# hardware 2026-11-01: 10/10 cycles PASS, persistent boot order unchanged.
-#
 # Target: a dual-OS DUT (e.g. Windows Server 2022 + Ubuntu 24.04 on one disk,
 # persistent UEFI boot order as installed). Each cycle:
 #   one-shot Boot Override to the OTHER OS via SOL pty (verified path

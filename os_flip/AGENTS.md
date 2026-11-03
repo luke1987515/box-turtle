@@ -17,13 +17,18 @@ info. Every cycle is fully logged under `$WORK_DIR/os_flip_<ts>/`.
 
 ```bash
 # Sandbox (no hardware; stubbed ssh/ping/ipmitool/ip in sandbox/bin/):
-./sandbox/run_case.sh A    # cases A..H; see sandbox/run_case.sh
+./sandbox/run_case.sh A    # cases A..L; see sandbox/run_case.sh
 
 # Real hardware (Linux runner: bash, ip, ping, ipmitool, python3 + pexpect,
 # layer-2 reachability to DUT and BMC):
 cp os_flip.env.example os_flip.env    # fill in, chmod 600
 ./discovery.sh                        # first run: locate DUT/BMC, ask creds
 ./os_flip.sh 10                       # reset mode (legacy warm reset)
+SHUTDOWN_MODE=clean ./os_flip.sh 10   # clean mode (graceful SSH shutdown,
+                                      # bootdev latched while power is off)
+./ac_cycle.sh                         # one real AC cycle (relay; graceful
+                                      # shutdown by default; PRE_SHUTDOWN=0 =
+                                      # legacy hard cut, non-Windows only)
 SHUTDOWN_MODE=clean ./os_flip.sh 10   # clean mode (graceful SSH shutdown,
                                       # bootdev latched while power is off)
 ```
@@ -49,6 +54,7 @@ SHUTDOWN_MODE=clean ./os_flip.sh 10   # clean mode (graceful SSH shutdown,
 ## Layout
 
 - `os_flip.sh` — main driver (cycles, identification, collection, logging)
+- `ac_cycle.sh` — one real AC power cycle (relay; graceful shutdown default)
 - `sol_boot.py` — SOL/pty boot-override driver (the verified key path lives here)
 - `discovery.sh` — DUT/BMC discovery (ARP/MAC scan), one-time credential setup
 - `ssh_cmd.py` — small ssh helper used by the driver
@@ -61,6 +67,8 @@ generated_by : AI-assisted development — Hermes Agent (Nous Research)
 designed_by  : luke1987515 (requirements, environment decisions, acceptance)
 model        : Qwen3.8-27B (self-hosted, 4-bit quant); earlier sessions may
                have used other models
-verified     : 2026-11-01 — sandbox 8/8 cases; real hardware 10/10 cycles
-               PASS (FAIL_COUNT=0), persistent boot order unchanged
+verified     : 2026-11-01 — sandbox cases + real hardware 10/10 cycles PASS;
+               2026-11-02 — real hardware 10/10 os_flip + 3/3 ac_cycle AC
+               cycles PASS (TUCANA); sandbox 12/12 cases (A..L)
+               (FAIL_COUNT=0, persistent boot order unchanged)
 ```

@@ -15,9 +15,11 @@ Designed and validated by **luke1987515**; developed with the assistance of an
 AI agent (**Hermes Agent** by Nous Research; self-hosted **Qwen3.8-27B**
 model — earlier development sessions may have used other models).
 
-Verified before publishing: sandbox **8/8** test cases + real-hardware
-**10/10** cycle PASS run on **2026-11-01** (FAIL_COUNT=0; persistent boot
-order unchanged; machine left on the last booted OS).
+Verified before publishing: sandbox **12/12** test cases + real-hardware
+**20/20** os_flip cycle PASS (two 10-cycle runs, **2026-11-01** and
+**2026-11-02**) + **3/3** `ac_cycle.sh` AC cycle PASS run (**2026-11-02**)
+(FAIL_COUNT=0; persistent boot order unchanged; machine left on the last
+booted OS).
 
 ## How a cycle works
 
@@ -36,6 +38,41 @@ clean shutdown via SSH (or legacy warm reset)
 Boot confirmation is **SOL stream + ping**; ping is the ground truth (SOL may
 be silent during boot on some platforms). OS identification runs in retry
 rounds because the SSH daemon can come up well after the first ping.
+
+## ac_cycle.sh -- one real AC power cycle
+
+A companion tool for DUTs with **relay-controlled AC power**: one full AC
+power cycle with the relay as the power switch. The default flow is a
+**graceful shutdown** (verified on the TUCANA dual-OS DUT on 2026-11-02,
+3/3 cycles PASS):
+
+```
+precheck (DUT ping + BMC answers IPMI)
+  -> identify the live OS (SSH probe: windows / ubuntu)
+  -> clean shutdown via SSH, BMC confirms "Chassis Power is off"
+     (forced chassis power off fallback if the clean path times out)
+  -> cut the relay (AC_SETTLE seconds; trap-guarded restore)
+  -> confirm DUT down -> restore relay
+  -> wait for BMC IPMI -> power on via BMC if the system stayed off
+  -> wait for DUT ping -> refresh DUT_IP from DUT_MAC -> summary
+```
+
+Why the graceful default: a hard AC cut while the OS is running is an
+unclean shutdown -- on the TUCANA machine it dropped Windows into the
+no-network Recovery environment (WinRE) and the DUT stayed unreachable
+for >20 minutes. The relay is therefore **never cut until the BMC has
+confirmed power OFF**. `PRE_SHUTDOWN=0` restores the legacy hard-cut
+behavior (do NOT use it on Windows machines).
+
+Safety: the relay cut is trap-guarded (any exit path restores the relay);
+the precheck refuses to cut if the BMC does not answer IPMI or the
+shutdown did not confirm power off; the persistent boot order is never
+touched.
+
+```bash
+./ac_cycle.sh              # one cycle (graceful shutdown, default)
+PRE_SHUTDOWN=0 ./ac_cycle.sh   # legacy hard cut (non-Windows only)
+```
 
 ## Requirements (on the runner)
 
@@ -104,10 +141,13 @@ cut, no writes) — useful for sanity-checking the environment.
 | `BLOCK_GAP` | `2` | same-board MAC block width (3 MACs → gap ≤ 2) |
 | `CYCLES` | `10` (or argv 1) | number of switch cycles |
 | `SHUTDOWN_MODE` | `clean` | `clean` = SSH shutdown → off → bootdev-while-off → power on (COLD); `reset` = legacy warm reset |
+| `SHUTDOWN_TIMEOUT` | `60` | budget (s) for the clean shutdown to reach power off |
 | `SETUP_TIMEOUT` / `BOOT_TIMEOUT` | `120` / `240` | UEFI setup / boot-confirmation budgets (s) |
 | `PROBE_TIMEOUT` / `ID_PROBE_BUDGET` | `30` / `240` | single SSH probe / whole identification budget (s) |
 | `COLLECT_TIMEOUT` | `120` | system-info collection budget (s) |
 | `BMC_DEFAULT_USER` / `BMC_DEFAULT_PASS` | vendor defaults | used only for discovery's first trial |
+| `PRE_SHUTDOWN` | `1` | (ac_cycle.sh) confirm power OFF before the relay cut; `0` = legacy hard cut (non-Windows only) |
+| `AC_SETTLE` / `BMC_WAIT` | `6` / `180` | (ac_cycle.sh) relay cut duration / BMC-return budget (s) |
 
 ## Failure semantics
 
@@ -137,9 +177,15 @@ cd sandbox
 ./run_case.sh F    # clean mode, SSH hangs -> forced off/on, PASS + WARN
 ./run_case.sh G    # clean mode, BIOS drops the latch -> setup retry recovers
 ./run_case.sh H    # first-run discovery (manual mode) + 1 cycle
+./run_case.sh I    # ac_cycle.sh legacy hard cut (PRE_SHUTDOWN=0)
+./run_case.sh J    # ac_cycle.sh graceful, windows shutdown path
+./run_case.sh K    # ac_cycle.sh graceful, ubuntu shutdown path
+./run_case.sh L    # ac_cycle.sh SSH dies -> forced-off fallback, PASS + WARN
 ```
 
-All cases must exit 0.
+Expected exit code per case (the pass criterion): A=0, **B=1, C=1**
+(the negative cases abort the run by design), D=0, E=0, F=0, G=0,
+H=0, I=0, J=0, K=0, L=0.
 
 ## Safety notes
 

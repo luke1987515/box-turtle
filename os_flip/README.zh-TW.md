@@ -12,8 +12,10 @@
 由 **luke1987515** 設計並驗證；以 AI agent（Nous Research 的 **Hermes Agent**；
 self-hosted **Qwen3.8-27B** 模型——早期開發 session 可能使用其他模型）輔助開發。
 
-公開前已驗證：sandbox **8/8** 測試案例 + 實機 **10/10** 圈 PASS（**2026-11-01**，
-FAIL_COUNT=0；持久開機順序未動；機器停在最後開出的 OS）。
+公開前已驗證：sandbox **12/12** 測試案例 + 實機 **20/20** 圈 os_flip PASS
+（兩場 10 圈：**2026-11-01** 與 **2026-11-02**）+ **3/3** `ac_cycle.sh` AC
+圈 PASS（**2026-11-02**；FAIL_COUNT=0；持久開機順序未動；機器停在
+最後開出的 OS）。
 
 ## 每圈的動作
 
@@ -32,6 +34,36 @@ SSH clean shutdown（或 legacy warm reset）
 開機確認 = **SOL 串流 + ping**；ping 是 ground truth（有些平台開機期 SOL
 會完全靜音）。OS 鑑定以重試輪次進行，因為 SSH daemon 可能比第一次 ping
 晚很多才起來。
+
+## ac_cycle.sh — 一次真 AC 切斷
+
+給 **relay 控制 AC 供電** 的 DUT 的配套工具：用 relay 當電源開關做完整
+一次 AC 切斷。預設流程是 **graceful shutdown**（2026-11-02 在 TUCANA
+雙 OS DUT 實機驗證，3/3 圈 PASS）：
+
+```
+precheck（DUT ping + BMC 回應 IPMI）
+  -> 鑑定 live OS（SSH probe：windows / ubuntu）
+  -> SSH 乾淨關機、BMC 確認 "Chassis Power is off"
+     （clean 路徑逾時則 fallback 強制 chassis power off）
+  -> 切 relay（AC_SETTLE 秒；trap 保護還原）
+  -> 確認 DUT down -> 還原 relay
+  -> 等 BMC IPMI -> 系統仍 off 則經 BMC 開機
+  -> 等 DUT ping -> 由 DUT_MAC 刷新 DUT_IP -> 總結
+```
+
+為什麼預設 graceful：OS 執行中硬切 AC = 髒關機——TUCANA 那台因此掉進
+無網路的 Windows Recovery（WinRE），DUT 超過 20 分鐘無法到達。所以
+**BMC 確認 power OFF 之前絕不切 relay**。`PRE_SHUTDOWN=0` 恢復舊的
+hard-cut 行為（**Windows 機器不要用**）。
+
+安全：relay 切斷有 trap 保護（任何離開路徑都還原）；precheck 在 BMC
+不回應 IPMI、或關機未確認 power off 時拒絕切斷；不碰持久開機順序。
+
+```bash
+./ac_cycle.sh              # 一圈（預設 graceful）
+PRE_SHUTDOWN=0 ./ac_cycle.sh   # 舊 hard cut（僅非 Windows）
+```
 
 ## 執行機（runner）需求
 
@@ -91,10 +123,13 @@ CLI 環境變數  >  ./os_flip.env  >  互動式 discovery
 | `BLOCK_GAP` | `2` | 同板 MAC 連號組寬（3 個 → gap ≤ 2） |
 | `CYCLES` | `10`（或 argv 1） | 切換圈數 |
 | `SHUTDOWN_MODE` | `clean` | `clean` = SSH 關機 → 斷電 → 斷電中 latch bootdev → 開機（COLD）；`reset` = legacy warm reset |
+| `SHUTDOWN_TIMEOUT` | `60` | 乾淨關機到 power off 的預算（秒） |
 | `SETUP_TIMEOUT` / `BOOT_TIMEOUT` | `120` / `240` | UEFI setup / 開機確認預算（秒） |
 | `PROBE_TIMEOUT` / `ID_PROBE_BUDGET` | `30` / `240` | 單次 SSH probe / 整體鑑定預算（秒） |
 | `COLLECT_TIMEOUT` | `120` | 系統資訊收集預算（秒） |
 | `BMC_DEFAULT_USER` / `BMC_DEFAULT_PASS` | vendor 預設 | 只用於 discovery 的首次試探 |
+| `PRE_SHUTDOWN` | `1` |（ac_cycle.sh）切 relay 前確認 power OFF；`0` = 舊 hard cut（僅非 Windows） |
+| `AC_SETTLE` / `BMC_WAIT` | `6` / `180` |（ac_cycle.sh）relay 切斷秒數 / BMC 回來預算（秒） |
 
 ## 失敗語義
 
@@ -122,9 +157,14 @@ cd sandbox
 ./run_case.sh F    # clean 模式 SSH 掛死 -> 強制 off/on、PASS + WARN
 ./run_case.sh G    # clean 模式 BIOS 掉 latch -> setup retry 救回
 ./run_case.sh H    # 首次執行 discovery（手動模式）+ 1 圈
+./run_case.sh I    # ac_cycle.sh 舊 hard cut（PRE_SHUTDOWN=0）
+./run_case.sh J    # ac_cycle.sh graceful、windows 關機路徑
+./run_case.sh K    # ac_cycle.sh graceful、ubuntu 關機路徑
+./run_case.sh L    # ac_cycle.sh SSH 掛死 -> 強制 off fallback、PASS + WARN
 ```
 
-所有 case 都必須 exit 0。
+各 case 預期 exit code（過關標準）：A=0、**B=1、C=1**（負例依設計
+中止全場、exit 1）、D=0、E=0、F=0、G=0、H=0、I=0、J=0、K=0、L=0。
 
 ## 安全說明
 

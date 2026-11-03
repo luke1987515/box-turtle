@@ -3,7 +3,8 @@
 #
 # Provenance: designed & validated by luke1987515; AI-assisted development
 # (Hermes Agent by Nous Research; self-hosted Qwen3.8-27B). Verified on real
-# hardware 2026-11-01: 10/10 cycles PASS, persistent boot order unchanged.
+# hardware 2026-11-01 and 2026-11-02: 20/20 cycles PASS across two 10-cycle
+# runs, persistent boot order unchanged.
 #
 # Target: a dual-OS DUT (e.g. Windows Server 2022 + Ubuntu 24.04 on one disk,
 # persistent UEFI boot order as installed). Each cycle:
