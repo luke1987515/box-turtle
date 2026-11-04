@@ -38,8 +38,7 @@ SSH clean shutdown（或 legacy warm reset）
 ## ac_cycle.sh — 一次真 AC 切斷
 
 給 **relay 控制 AC 供電** 的 DUT 的配套工具：用 relay 當電源開關做完整
-一次 AC 切斷。預設流程是 **graceful shutdown**（2026-11-02 在 TUCANA
-雙 OS DUT 實機驗證，3/3 圈 PASS）：
+一次 AC 切斷。預設流程是 **graceful shutdown**（2026-11-02 在一台雙 OS DUT 實機驗證，3/3 圈 PASS）：
 
 ```
 precheck（DUT ping + BMC 回應 IPMI）
@@ -52,7 +51,7 @@ precheck（DUT ping + BMC 回應 IPMI）
   -> 等 DUT ping -> 由 DUT_MAC 刷新 DUT_IP -> 總結
 ```
 
-為什麼預設 graceful：OS 執行中硬切 AC = 髒關機——TUCANA 那台因此掉進
+為什麼預設 graceful：OS 執行中硬切 AC = 髒關機——該機因此掉進
 無網路的 Windows Recovery（WinRE），DUT 超過 20 分鐘無法到達。所以
 **BMC 確認 power OFF 之前絕不切 relay**。`PRE_SHUTDOWN=0` 恢復舊的
 hard-cut 行為（**Windows 機器不要用**）。

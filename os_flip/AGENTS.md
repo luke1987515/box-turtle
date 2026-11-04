@@ -69,6 +69,6 @@ model        : Qwen3.8-27B (self-hosted, 4-bit quant); earlier sessions may
                have used other models
 verified     : 2026-11-01 — sandbox cases + real hardware 10/10 cycles PASS;
                2026-11-02 — real hardware 10/10 os_flip + 3/3 ac_cycle AC
-               cycles PASS (TUCANA); sandbox 12/12 cases (A..L)
+               cycles PASS (dual-OS DUT); sandbox 12/12 cases (A..L)
                (FAIL_COUNT=0, persistent boot order unchanged)
 ```

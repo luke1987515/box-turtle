@@ -43,7 +43,7 @@ rounds because the SSH daemon can come up well after the first ping.
 
 A companion tool for DUTs with **relay-controlled AC power**: one full AC
 power cycle with the relay as the power switch. The default flow is a
-**graceful shutdown** (verified on the TUCANA dual-OS DUT on 2026-11-02,
+**graceful shutdown** (verified on a dual-OS DUT on 2026-11-02,
 3/3 cycles PASS):
 
 ```
@@ -58,7 +58,7 @@ precheck (DUT ping + BMC answers IPMI)
 ```
 
 Why the graceful default: a hard AC cut while the OS is running is an
-unclean shutdown -- on the TUCANA machine it dropped Windows into the
+unclean shutdown -- on that machine it dropped Windows into the
 no-network Recovery environment (WinRE) and the DUT stayed unreachable
 for >20 minutes. The relay is therefore **never cut until the BMC has
 confirmed power OFF**. `PRE_SHUTDOWN=0` restores the legacy hard-cut

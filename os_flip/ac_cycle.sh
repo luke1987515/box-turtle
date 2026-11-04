@@ -6,19 +6,31 @@
 #
 # Provenance: designed & validated by luke1987515; AI-assisted development
 # (Hermes Agent by Nous Research; self-hosted Qwen3.8-27B). Verified on real
-# hardware 2026-11-02 (TUCANA dual-OS DUT): 3/3 AC cycles PASS with the
+# hardware 2026-11-02 (dual-OS DUT): 3/3 AC cycles PASS with the
 # graceful-shutdown default (PRE_SHUTDOWN=1); legacy hard cut (PRE_SHUTDOWN=0)
-# re-verified in sandbox (case I).
+# re-verified in sandbox. DHCP-drift handling (2026-11-03) sandbox-verified,
+# real-hardware verification pending.
 #
-# Flow: precheck (DUT ping + BMC answers IPMI) -> graceful OS shutdown
-# (identify the live OS via ssh probe, fire the shutdown, confirm
-# "Chassis Power is off" via the BMC; forced chassis power off fallback
-# if the clean path times out) -> cut relay -> settle -> confirm DUT down
-# -> restore relay -> wait for BMC (IPMI probe; real BMCs block ICMP) ->
-# power on via BMC if it stayed off -> wait for DUT ping -> refresh DUT_IP
-# from DUT_MAC -> summary.
+# Flow: precheck (DUT ping + BMC answers IPMI; an endpoint unreachable at its
+# known IP is re-found via ONE arp sweep matched on its MAC) -> graceful OS
+# shutdown (identify the live OS via ssh probe, fire the shutdown, confirm
+# "Chassis Power is off" via the BMC; forced chassis power off fallback if
+# the clean path times out) -> cut relay -> settle -> confirm DUT down ->
+# restore relay -> two-stage BMC wait (known IP, then drift search) -> power
+# on via BMC if it stayed off -> two-stage DUT wait (known IP, then drift
+# search) -> optional persist of verified refreshed identity (PERSIST_IP=1)
+# -> summary.
 #
-# Why the graceful shutdown (2026-11-02, TUCANA incident): a hard AC cut
+# Why the drift handling (2026-11-03): on this site BOTH the DUT and the BMC
+# take their IP from DHCP, so either can come back at a new IP after
+# the cycle. A fixed-IP wait would then burn its budget and report a false
+# FAIL. Both waits are two-stage: probe the known IP first (happy path = zero
+# extra traffic), and past a threshold repeat an L2 ARP sweep and match the
+# endpoint's MAC (a ping sweep cannot see the BMC -- AIC BMCs block ICMP but
+# answer ARP). MACs are learned from the neigh cache at precheck when not in
+# the env, so the fallback self-bootstraps without a discovery run.
+#
+# Why the graceful shutdown (2026-11-02, dual-OS DUT incident): a hard AC cut
 # while the OS is running is an unclean shutdown; on that machine it
 # dropped Windows into the no-network Recovery environment (WinRE) and the
 # DUT stayed unreachable for >20 min. The relay is therefore never cut
@@ -28,102 +40,57 @@
 # Safety:
 #   - the relay cut is trap-guarded: ANY exit path (error, Ctrl-C, early
 #     return) restores the relay if it is still cut
-#   - precheck refuses to cut if the BMC does not answer IPMI before the
-#     cut (the post-restore recovery depends on it)
-#   - the cut is further refused unless the OS probe identified a live OS
-#     AND the BMC confirmed power off after the shutdown
+#   - precheck refuses to cut unless both endpoints are reachable (known IP
+#     or drift-verified) -- the post-restore recovery depends on the BMC
+#   - the cut is further refused (PRE_SHUTDOWN=1) unless the OS probe
+#     identified a live OS AND the BMC confirmed power off after the shutdown
 #   - never touches the persistent boot order, the BMC config, or the OSes
-#   - read-only toward the env file (no writes)
+#   - the env file is read-only unless PERSIST_IP=1 (then only the identity
+#     lines verified this run are rewritten)
 #
 # Usage:
 #   RELAY_OFF_CMD='...' RELAY_ON_CMD='...' ./ac_cycle.sh
 #   (or keep RELAY_OFF_CMD / RELAY_ON_CMD in os_flip.env)
+#   PERSIST_IP=1 ./ac_cycle.sh   # also write verified refreshed IPs/MACs back
 # Exit: 0 = PASS (DUT back, BMC back) | 1 = FAIL
 set -u
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+. "$SCRIPT_DIR/os_flip_common.sh"
+LOG_TAG=ac_cycle
 ENV_FILE=${OS_FLIP_ENV_FILE:-$SCRIPT_DIR/os_flip.env}
 
+# ac_cycle-specific knobs (wait budgets / drift thresholds live in the common)
 AC_SETTLE=${AC_SETTLE:-6}      # seconds the relay stays cut
-BMC_WAIT=${BMC_WAIT:-180}     # budget for BMC to answer IPMI after restore
-DUT_WAIT=${DUT_WAIT:-180}     # budget for DUT ping after restore
 PRE_SHUTDOWN=${PRE_SHUTDOWN:-1}    # 1 (default): confirm power off before the cut
 SHUTDOWN_TIMEOUT=${SHUTDOWN_TIMEOUT:-60}   # budget for the clean OS shutdown
 PROBE_TIMEOUT=${PROBE_TIMEOUT:-15}  # per ssh probe attempt
 ID_PROBE_BUDGET=${ID_PROBE_BUDGET:-120}   # total budget for OS identification
-PY3=${PY3:-python3}
+PERSIST_IP=${PERSIST_IP:-0}    # 1 = rewrite verified refreshed identity into ENV_FILE
 
-log() {
-  local msg="[$(date '+%Y-%m-%d %H:%M:%S')] [ac_cycle] $*"
-  echo "$msg"
-  [ -n "${LOG_FILE:-}" ] && echo "$msg" >> "$LOG_FILE"
-}
-
-# load_env_file: fill only EMPTY variables from the env file (CLI wins).
-# Strict KEY=VALUE parsing -- the file is never sourced/executed.
-load_env_file() {
-  [ -f "$ENV_FILE" ] || return 1
-  local line k v
-  while IFS= read -r line; do
-    case $line in ''|\#*) continue;; esac
-    k=${line%%=*}; v=${line#*=}
-    case $k in
-      DUT_IP|DUT_MAC|BMC_IP|BMC_USER|BMC_PASS|RELAY_OFF_CMD|RELAY_ON_CMD|BMC_DEFAULT_USER|BMC_DEFAULT_PASS|WIN_USER|WIN_PASS|UBU_USER|UBU_PASS)
-        [ -n "${!k:-}" ] && continue
-        export "$k=$v";;
-    esac
-  done < "$ENV_FILE"
-  return 0
-}
 load_env_file
-
-# ipmi_try IP CMD...: IPMI with the best-known credentials -- site creds
-# (BMC_PASS) first if set, then the public vendor defaults. rc 0 = success.
-ipmi_try() {
-  local h=$1; shift
-  if [ -n "${BMC_PASS:-}" ]; then
-    timeout 15 ipmitool -I lanplus -H "$h" -U "${BMC_USER:-admin}" -P "$BMC_PASS" "$@" 2>/dev/null && return 0
-  fi
-  timeout 15 ipmitool -I lanplus -H "$h" -U "${BMC_DEFAULT_USER:-admin}" -P "${BMC_DEFAULT_PASS:-admin}" "$@" 2>/dev/null && return 0
-  return 1
-}
-
-RELAY_STATE=on     # "cut" while the relay is known to be off (trap-guarded)
-relay_safety_restore() {
-  [ "${RELAY_STATE:-on}" = "cut" ] || return 0
-  [ -n "${RELAY_ON_CMD:-}" ] || return 0
-  log "SAFETY: relay still cut at exit -- restoring: bash -c \"$RELAY_ON_CMD\""
-  bash -c "$RELAY_ON_CMD" >/dev/null 2>&1 || log "SAFETY: restore command failed -- restore the relay MANUALLY"
-  RELAY_STATE=on
-}
-trap relay_safety_restore EXIT
-
-fail() { log "FATAL: $*"; exit 1; }
 
 # ---- prerequisites ----
 [ -n "${RELAY_OFF_CMD:-}" ] && [ -n "${RELAY_ON_CMD:-}" ] || \
   fail "RELAY_OFF_CMD / RELAY_ON_CMD not set (env or os_flip.env)"
 [ -n "${DUT_IP:-}" ] || fail "DUT_IP unknown -- run discovery.sh first"
 [ -n "${BMC_IP:-}" ] || fail "BMC_IP unknown -- run discovery.sh first"
+relay_arm
 
 # ---- precheck (refuse to cut unless both endpoints look sane) ----
-log "precheck: DUT $DUT_IP pingable"
-ping -c1 -W2 "$DUT_IP" >/dev/null 2>&1 || \
-  fail "DUT $DUT_IP not pingable before the cut (wrong IP / already down?)"
-log "precheck: BMC $BMC_IP answers IPMI"
-ipmi_try "$BMC_IP" chassis power status >/dev/null 2>&1 || \
-  fail "BMC $BMC_IP does not answer IPMI before the cut -- post-restore recovery depends on it; aborting"
+log "precheck: DUT $DUT_IP pingable / BMC $BMC_IP answers IPMI"
+resolve_endpoints
+[ "$DUT_RESOLVED" -eq 1 ] || \
+  fail "DUT not reachable at $DUT_IP (known IP + drift search) -- wrong IP / already down / DUT_MAC unset?"
+[ "$BMC_RESOLVED" -eq 1 ] || \
+  fail "BMC $BMC_IP does not answer IPMI (known IP + drift search) -- post-restore recovery depends on it; aborting"
+[ -n "${DUT_MAC:-}" ] || log "WARN: DUT_MAC still unset -- post-restore drift search for the DUT will be impossible"
+[ -n "${BMC_MAC:-}" ] || log "WARN: BMC_MAC still unset -- post-restore drift search for the BMC will be impossible"
 
 # ---- graceful OS shutdown (confirm OFF via BMC before the AC cut) ----
 # Same patterns as os_flip.sh's clean mode (probe_one / ssh_fire /
 # shut_down_os); the OSFLIPPROBE77/SUDONOK77 markers are shared.
 
-# power_is_off: BMC confirms the system power is off (either ipmitool
-# output format: "Chassis Power is off" / "System Power : off").
-power_is_off() {
-  ipmi_try "$BMC_IP" chassis power status 2>/dev/null | grep -Eq "Chassis Power is off" && return 0
-  ipmi_try "$BMC_IP" chassis status 2>/dev/null | grep -Eq "System Power[[:space:]]*:[[:space:]]*off"
-}
 
 # ssh_fire USER PASS CMD: send CMD and tolerate a marker-less session (the
 # shutdown command kills its own session; EOF is the expected ending).
@@ -162,7 +129,7 @@ shut_down_os() {
     fi
   fi
   while :; do
-    if power_is_off; then
+    if power_is_off "$BMC_IP"; then
       [ $forced -eq 1 ] && log "clean shutdown: forced off confirmed"
       log "clean shutdown: System Power off after $(( $(date +%s) - t0 ))s"
       return 0
@@ -270,61 +237,30 @@ else
   log "WARN: relay ON command failed -- continuing with relay state = cut (exit trap will retry the restore)"
 fi
 
-# ---- post-restore: BMC (IPMI probe; real BMCs block ICMP) ----
-log "waiting for BMC $BMC_IP to come back (${BMC_WAIT}s budget) ..."
-bmc_up=0 praw="" pstat=""
-t0=$(date +%s)
-while :; do
-  now=$(date +%s)
-  if [ $((now - t0)) -ge "$BMC_WAIT" ]; then log "WARN: BMC $BMC_IP not back within ${BMC_WAIT}s"; break; fi
-  praw=$(ipmi_try "$BMC_IP" chassis power status 2>/dev/null)
-  if [ -n "$praw" ]; then bmc_up=1; log "BMC $BMC_IP is back"; break; fi
-  sleep 3
-done
-if [ "$bmc_up" -eq 1 ]; then
-  # real ipmitool prints "Chassis Power is on/off" (no colon -- that
-  # format is chassis *status*, not power status)
-  case "$praw" in
-    *"is on"*)  pstat=on ;;
-    *"is off"*) pstat=off ;;
-    *)          pstat="" ;;
-  esac
-  case "$pstat" in
+# ---- post-restore: BMC (two-stage; IPMI probe; real BMCs block ICMP) ----
+wait_bmc_up
+if [ "$BMC_UP" -eq 1 ]; then
+  case "$BMC_PSTAT" in
     off) log "system is OFF after AC loss -- powering on via BMC"
          ipmi_try "$BMC_IP" chassis power on >/dev/null 2>&1 || \
            log "WARN: BMC power on failed -- power the system on manually" ;;
     on) log "system already ON (auto power-restore in effect)" ;;
-    "") log "WARN: could not parse BMC power state (output: '$praw')" ;;
+    *) log "WARN: could not parse BMC power state (state: $BMC_PSTAT)" ;;
   esac
 else
   log "WARN: BMC unavailable after restore -- cannot verify/force the power state"
 fi
 
-# ---- post-restore: DUT ----
-log "waiting for DUT $DUT_IP ping UP (${DUT_WAIT}s budget) ..."
-dut_up=0
-t0=$(date +%s)
-while :; do
-  now=$(date +%s)
-  if [ $((now - t0)) -ge "$DUT_WAIT" ]; then log "WARN: DUT ping not UP within ${DUT_WAIT}s (it may still be booting)"; break; fi
-  if ping -c1 -W1 "$DUT_IP" >/dev/null 2>&1; then dut_up=1; log "DUT ping UP"; break; fi
-  sleep 3
-done
+# ---- post-restore: DUT (two-stage: known IP, then MAC drift search) ----
+wait_dut_up
 
-# refresh the DUT IP from its MAC (DHCP drift), the way discovery.sh does
-if [ -n "${DUT_MAC:-}" ] && [ "$dut_up" -eq 1 ]; then
-  nmac=$(echo "$DUT_MAC" | tr 'A-Z' 'a-z')
-  nip=$(ip neigh show 2>/dev/null | awk -v m="$nmac" 'index(tolower($0), m) && $1 ~ /^[0-9]/ {print $1; exit}')
-  if [ -n "$nip" ] && [ "$nip" != "$DUT_IP" ]; then
-    log "DUT IP refreshed after boot: $DUT_IP -> $nip"
-    DUT_IP=$nip
-  fi
-fi
+# ---- optional persist of verified refreshed identity ----
+persist_ips
 
 # ---- summary ----
-if [ "$dut_up" -eq 1 ] && [ "$bmc_up" -eq 1 ]; then
-  log "==== ac_cycle done: result=PASS dut=$DUT_IP bmc=$BMC_IP pstat=$pstat shut_os=$shut_os ===="
+if [ "$DUT_UP" -eq 1 ] && [ "$BMC_UP" -eq 1 ]; then
+  log "==== ac_cycle done: result=PASS dut=$DUT_IP bmc=$BMC_IP pstat=$BMC_PSTAT shut_os=$shut_os ===="
   exit 0
 fi
-log "==== ac_cycle done: result=FAIL dut_up=$dut_up bmc_up=$bmc_up pstat=$pstat shut_os=$shut_os ===="
+log "==== ac_cycle done: result=FAIL dut_up=$DUT_UP bmc_up=$BMC_UP pstat=$BMC_PSTAT shut_os=$shut_os ===="
 exit 1

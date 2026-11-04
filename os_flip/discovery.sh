@@ -45,6 +45,8 @@
 set -u
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+. "$SCRIPT_DIR/os_flip_common.sh"
+LOG_TAG=discovery
 ENV_FILE="${OS_FLIP_ENV_FILE:-$SCRIPT_DIR/os_flip.env}"
 LOG_FILE=""
 AUTO=0; DRY=0; REAUTH=0
@@ -60,11 +62,6 @@ while [ $# -gt 0 ]; do
     *) shift;;
   esac
 done
-
-log() {
-  local line="[$(date '+%Y-%m-%d %H:%M:%S')] [discovery] $*"
-  if [ -n "$LOG_FILE" ]; then echo "$line" | tee -a "$LOG_FILE"; else echo "$line"; fi
-}
 
 # account name conventions (editable during the prompts, Enter accepts):
 BMC_USER=${BMC_USER:-admin}
@@ -87,24 +84,7 @@ UBU_PASS=${UBU_PASS:-}
 DUT_NET=${DUT_NET:-}
 RELAY_OFF_CMD=${RELAY_OFF_CMD:-}
 RELAY_ON_CMD=${RELAY_ON_CMD:-}
-RELAY_STATE=on     # "cut" while the relay is known to be off (trap-guarded)
 
-# load_env_file: fill only EMPTY variables from the env file (CLI wins).
-# Strict KEY=VALUE parsing -- the file is never sourced/executed.
-load_env_file() {
-  [ -f "$ENV_FILE" ] || return 1
-  local line k v
-  while IFS= read -r line; do
-    case $line in ''|\#*) continue;; esac
-    k=${line%%=*}; v=${line#*=}
-    case $k in
-      DUT_IP|DUT_MAC|DUT_NET|BMC_IP|BMC_USER|BMC_PASS|WIN_USER|WIN_PASS|UBU_USER|UBU_PASS|KNOWN_OUI|RELAY_OFF_CMD|RELAY_ON_CMD|BMC_DEFAULT_USER|BMC_DEFAULT_PASS)
-        [ -n "${!k:-}" ] && continue
-        export "$k=$v";;
-    esac
-  done < "$ENV_FILE"
-  return 0
-}
 if [ $REAUTH -eq 1 ]; then
   log "--reauth: removing $ENV_FILE"
   rm -f "$ENV_FILE"
@@ -148,39 +128,11 @@ m = sys.argv[1].lower().split(":")
 print(int(m[3], 16) * 65536 + int(m[4], 16) * 256 + int(m[5], 16))' "$1" 2>/dev/null || echo ""
 }
 
-# ipmi_default_ok IP: rc 0 = answers IPMI with the public vendor defaults
-ipmi_default_ok() {
-  timeout 10 ipmitool -I lanplus -H "$1" -U "$BMC_DEFAULT_USER" -P "$BMC_DEFAULT_PASS" \
-    chassis power status >/dev/null 2>&1
-}
-
 # port22 IP: rc 0 = TCP 22 open (bash /dev/tcp probe)
 port22() {
   (exec 3<>"/dev/tcp/$1/22") 2>/dev/null && { exec 3>&-; return 0; } || return 1
 }
-
-# ipmi_try IP CMD...: IPMI with the best-known credentials -- site creds
-# (BMC_PASS) first if set, then the public vendor defaults. rc 0 = success.
-ipmi_try() {
-  local h=$1; shift
-  if [ -n "${BMC_PASS:-}" ]; then
-    timeout 15 ipmitool -I lanplus -H "$h" -U "${BMC_USER:-admin}" -P "$BMC_PASS" "$@" 2>/dev/null && return 0
-  fi
-  timeout 15 ipmitool -I lanplus -H "$h" -U "$BMC_DEFAULT_USER" -P "$BMC_DEFAULT_PASS" "$@" 2>/dev/null && return 0
-  return 1
-}
-
-# relay_safety_restore: trap handler -- if the script exits with the relay
-# still cut (E2 early return, Ctrl-C, any error path), restore it. No-op
-# unless RELAY_STATE=cut. Never fails the script.
-relay_safety_restore() {
-  [ "${RELAY_STATE:-on}" = "cut" ] || return 0
-  [ -n "${RELAY_ON_CMD:-}" ] || return 0
-  log "SAFETY: relay still cut at exit -- restoring: bash -c \"$RELAY_ON_CMD\""
-  bash -c "$RELAY_ON_CMD" >/dev/null 2>&1 || log "SAFETY: restore command failed -- restore the relay MANUALLY"
-  RELAY_STATE=on
-}
-trap relay_safety_restore EXIT
+relay_arm
 
 # group MACs into same-board blocks (same OUI, consecutive tail, gap <= gap).
 # input: newline MACs on stdin; output: one "mac,mac[,mac]" block per line.
@@ -381,61 +333,31 @@ relay_fingerprint() {
   RELAY_STATE=on
   # Post-restore recovery (E6): after a full AC loss the system may not come
   # back on its own (Power Restore Policy: always-off). If a BMC is known,
-  # wait for it to return and power the system on if it stayed off.
+  # wait for it to return and power the system on if it stayed off. The BMC
+  # may have come back at a NEW IP (DHCP): wait_bmc_up drift-searches on
+  # B_MAC, and the refreshed B_IP is what write_env persists -- a stale IP
+  # no longer lands in the env file.
   if [ -n "$B_IP" ]; then
-    log "waiting for BMC $B_IP to come back (180s budget) ..."
-    local bmc_up=0 praw="" pstat t0 now
-    t0=$(date +%s)
-    while :; do
-      now=$(date +%s)
-      if [ $((now - t0)) -ge 180 ]; then log "WARN: BMC $B_IP not back within 180s"; break; fi
-      # BMCs (e.g. AMI MegaRAC) block ICMP but answer IPMI -- a ping
-      # liveness check would never see the real BMC come back. Probe with
-      # 'chassis power status': the power-state parse below reuses this
-      # output, so one query serves both roles.
-      praw=$(ipmi_try "$B_IP" chassis power status 2>/dev/null)
-      if [ -n "$praw" ]; then bmc_up=1; log "BMC $B_IP is back"; break; fi
-      sleep 3
-    done
-    if [ "$bmc_up" -eq 1 ]; then
-      # real ipmitool prints "Chassis Power is on/off" (no colon -- that
-      # format is chassis *status*, not power status)
-      case "$praw" in
-        *"is on"*)  pstat=on ;;
-        *"is off"*) pstat=off ;;
-        *)          pstat="" ;;
-      esac
-      case "$pstat" in
+    BMC_IP=$B_IP; BMC_MAC=$B_MAC
+    wait_bmc_up
+    B_IP=$BMC_IP
+    if [ "$BMC_UP" -eq 1 ]; then
+      case "$BMC_PSTAT" in
         off) log "system is OFF after AC loss -- powering on via BMC"
              ipmi_try "$B_IP" chassis power on >/dev/null 2>&1 || \
                log "WARN: BMC power on failed -- power the system on manually" ;;
         on) log "system already ON (auto power-restore in effect)" ;;
-        "") log "WARN: could not query BMC power state (IPMI unreachable with known creds)" ;;
-        *) log "WARN: unexpected power state '$pstat' after restore" ;;
+        *) log "WARN: unexpected power state '$BMC_PSTAT' after restore" ;;
       esac
     fi
   fi
-  # wait for the DUT to come back (cold boot), then refresh its IP
-  log "waiting for DUT $D_IP ping UP (180s budget) ..."
-  local t0 now
-  t0=$(date +%s)
-  while :; do
-    now=$(date +%s)
-    if [ $((now - t0)) -ge 180 ]; then
-      log "WARN: DUT ping not UP within 180s (it may still be booting)"
-      break
-    fi
-    if ping -c1 -W1 "$D_IP" >/dev/null 2>&1; then log "DUT ping UP"; break; fi
-    sleep 3
-  done
-  local nmac nip
-  nmac=$(echo "$D_MAC" | tr 'A-Z' 'a-z')
-  nip=$(ip neigh show 2>/dev/null | awk -v m="$nmac" 'index(tolower($0), m) && $1 ~ /^[0-9]/ {print $1; exit}')
-  if [ -n "$nip" ]; then
-    [ "$nip" != "$D_IP" ] && log "DUT IP refreshed after boot: $D_IP -> $nip"
-    D_IP=$nip
-  fi
-  DUT_MAC=$D_MAC; DUT_IP=$D_IP; BMC_IP=$B_IP
+  # wait for the DUT to come back (cold boot); drift-aware: the DHCP
+  # re-lease after the AC loss may hand the DUT a new IP -- wait_dut_up
+  # searches on D_MAC and refreshes D_IP.
+  DUT_IP=$D_IP; DUT_MAC=$D_MAC
+  wait_dut_up
+  D_IP=$DUT_IP
+  DUT_MAC=$D_MAC; DUT_IP=$D_IP; BMC_IP=$B_IP; BMC_MAC=$B_MAC
   return 0
 }
 
@@ -472,26 +394,28 @@ manual_discovery() {
     local doui dtail
     doui="${DUT_MAC:0:8}"
     dtail=$(mac_tail "$DUT_MAC")
-    local cand
-    for cand in $(awk -v d="${DUT_IP:-}" -v o="$doui" -v g="$BLOCK_GAP" -v dt="$dtail" '
+    local cand cand_mac
+    while read -r cand cand_mac; do
+      [ -n "$cand" ] || continue
+      if ipmi_default_ok "$cand"; then
+        BMC_IP=$cand
+        BMC_MAC=$cand_mac
+        log "BMC auto-found (same-OUI block, vendor-default creds OK): $BMC_IP ($BMC_MAC)"
+        if [ $INTERACTIVE -eq 1 ]; then
+          local yn
+          read -rp "accept $BMC_IP as BMC? [Y/n] " yn
+          case $yn in [Nn]*) BMC_IP=""; BMC_MAC="";; esac
+        fi
+        break
+      fi
+    done <<< "$(awk -v d="${DUT_IP:-}" -v o="$doui" -v g="$BLOCK_GAP" -v dt="$dtail" '
         function h2d(h,  i, v) { v = 0; for (i = 1; i <= length(h); i++) v = v * 16 + index("0123456789abcdef", substr(h, i, 1)) - 1; return v } 
         {
           m = tolower($2); split(m, p, ":")
           if (p[1]":"p[2]":"p[3] != o) next
           tail = h2d(p[4])*65536 + h2d(p[5])*256 + h2d(p[6])
-          if (($1 != d) && (tail - dt <= g) && (dt - tail <= g)) print $1
-        }' "$t" | sort -u); do
-      if ipmi_default_ok "$cand"; then
-        BMC_IP=$cand
-        log "BMC auto-found (same-OUI block, vendor-default creds OK): $BMC_IP"
-        if [ $INTERACTIVE -eq 1 ]; then
-          local yn
-          read -rp "accept $BMC_IP as BMC? [Y/n] " yn
-          case $yn in [Nn]*) BMC_IP="";; esac
-        fi
-        break
-      fi
-    done
+          if (($1 != d) && (tail - dt <= g) && (dt - tail <= g)) print $1, m
+        }' "$t" | sort -u)"
     rm -f "$t"
   fi
   if [ -z "${BMC_IP:-}" ]; then
@@ -503,6 +427,13 @@ manual_discovery() {
     if ! ipmi_default_ok "$BMC_IP"; then
       log "NOTE: $BMC_IP does not answer with vendor-default credentials -- you will be asked for the BMC password"
     fi
+  fi
+  # BMC_MAC: captured from the sweep (auto-found path) or learned from the
+  # neigh cache after any IPMI traffic (RMCP+ needs ARP even from
+  # ICMP-deaf BMCs)
+  if [ -z "${BMC_MAC:-}" ] && [ -n "${BMC_IP:-}" ]; then
+    BMC_MAC=$(learn_mac "$BMC_IP")
+    [ -n "$BMC_MAC" ] && log "BMC_MAC from ARP: $BMC_MAC"
   fi
   return 0
 }
@@ -545,7 +476,7 @@ write_env() {
     {
       echo "# os_flip site config -- written by discovery.sh $(date '+%Y-%m-%d %H:%M:%S')"
       echo "# chmod 600; local-only (gitignored). CLI env vars override this file."
-      for k in DUT_IP DUT_MAC DUT_NET BMC_IP BMC_USER BMC_PASS WIN_USER WIN_PASS \
+      for k in DUT_IP DUT_MAC DUT_NET BMC_IP BMC_MAC BMC_USER BMC_PASS WIN_USER WIN_PASS \
                UBU_USER UBU_PASS KNOWN_OUI RELAY_OFF_CMD RELAY_ON_CMD; do
         [ -n "${!k:-}" ] && echo "$k=${!k}"
       done
