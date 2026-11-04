@@ -26,6 +26,14 @@
 # only enter the neigh cache after IPMI/UDP traffic), so the drift search is
 # L2: raw ARP who-has per IP. The BMC answers ARP even though it never answers
 # ping (RMCP+ itself needs it), so one sweep recovers both endpoints.
+#
+# Provenance (2026-11-04, relay-cut site, real segment): the runner
+# there is WiFi -- mac80211 silently drops raw AF_PACKET frames, so
+# arp_sweep.py never works on such a runner. The drift search then degrades
+# to sweep_hosts.py (ping + neigh, MAC-matched for the DUT) plus bmc_sweep.py
+# (TCP-443 port scan + IPMI verification for the ICMP-deaf BMC); both were
+# verified live against the real DUT and BMC, and the drift path executed
+# for real in an ac_cycle run (DUT recovered 193s after power on).
 set -u
 
 PY3=${PY3:-python3}

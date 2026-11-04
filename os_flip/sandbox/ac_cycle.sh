@@ -6,10 +6,15 @@
 #
 # Provenance: designed & validated by luke1987515; AI-assisted development
 # (Hermes Agent by Nous Research; self-hosted Qwen3.8-27B). Verified on real
-# hardware 2026-11-02 (dual-OS DUT): 3/3 AC cycles PASS with the
-# graceful-shutdown default (PRE_SHUTDOWN=1); legacy hard cut (PRE_SHUTDOWN=0)
-# re-verified in sandbox. DHCP-drift handling (2026-11-03) sandbox-verified,
-# real-hardware verification pending.
+# hardware: 2026-11-02 (dual-OS DUT) 3/3 cycles PASS with the
+# graceful-shutdown default (PRE_SHUTDOWN=1); 2026-11-04 (relay-cut
+# runner on WiFi) graceful cycle PASS -- Windows clean shutdown in 5s, relay
+# cut window 8s, BMC back 75s, DUT pingable 193s after power on, no DHCP
+# drift (the post-120s drift search caught the DUT). Hard-cut cycles
+# (PRE_SHUTDOWN=0) on the same board run the full flow safely, but the DUT
+# stays network-invisible 8-10 min after a hard cut (OS already up on KVM) --
+# keep PRE_SHUTDOWN=1 on Windows boards and size DUT_WAIT to network-up time
+# (>=600) when hard-cut diagnostics are needed.
 #
 # Flow: precheck (DUT ping + BMC answers IPMI; an endpoint unreachable at its
 # known IP is re-found via ONE arp sweep matched on its MAC) -> graceful OS

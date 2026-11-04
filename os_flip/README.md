@@ -19,7 +19,9 @@ Verified before publishing: sandbox **12/12** test cases + real-hardware
 **20/20** os_flip cycle PASS (two 10-cycle runs, **2026-11-01** and
 **2026-11-02**) + **3/3** `ac_cycle.sh` AC cycle PASS run (**2026-11-02**)
 (FAIL_COUNT=0; persistent boot order unchanged; machine left on the last
-booted OS).
+booted OS) + a real-board `ac_cycle.sh` graceful cycle PASS (**2026-11-04**,
+relay-cut runner on WiFi; DUT pingable 193s after power on, no DHCP drift;
+the drift-search transport was verified live on the real segment).
 
 ## How a cycle works
 
@@ -63,6 +65,13 @@ no-network Recovery environment (WinRE) and the DUT stayed unreachable
 for >20 minutes. The relay is therefore **never cut until the BMC has
 confirmed power OFF**. `PRE_SHUTDOWN=0` restores the legacy hard-cut
 behavior (do NOT use it on Windows machines).
+
+Site note (2026-11-04): after a **hard** cut this board's DUT stays
+network-invisible for ~8-10 minutes even though the OS is already at its
+screen (old I210 driver + EEE are the leading suspects). The graceful
+default avoids it: the DUT was pingable 193s after power on. For hard-cut
+diagnostics set `DUT_WAIT>=600` in `os_flip.env` (the default 240 covers the
+graceful path, not the hard-cut blind window).
 
 Safety: the relay cut is trap-guarded (any exit path restores the relay);
 the precheck refuses to cut if the BMC does not answer IPMI or the
@@ -148,6 +157,7 @@ cut, no writes) — useful for sanity-checking the environment.
 | `BMC_DEFAULT_USER` / `BMC_DEFAULT_PASS` | vendor defaults | used only for discovery's first trial |
 | `PRE_SHUTDOWN` | `1` | (ac_cycle.sh) confirm power OFF before the relay cut; `0` = legacy hard cut (non-Windows only) |
 | `AC_SETTLE` / `BMC_WAIT` | `6` / `180` | (ac_cycle.sh) relay cut duration / BMC-return budget (s) |
+| `DUT_WAIT` / `DUT_DRIFT_START` | `240` / `120` | (ac_cycle.sh) total DUT-return budget / known-IP phase before the drift search (s); hard cuts on this board need `DUT_WAIT>=600` |
 
 ## Failure semantics
 

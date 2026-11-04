@@ -15,7 +15,9 @@ self-hosted **Qwen3.8-27B** 模型——早期開發 session 可能使用其他�
 公開前已驗證：sandbox **12/12** 測試案例 + 實機 **20/20** 圈 os_flip PASS
 （兩場 10 圈：**2026-11-01** 與 **2026-11-02**）+ **3/3** `ac_cycle.sh` AC
 圈 PASS（**2026-11-02**；FAIL_COUNT=0；持久開機順序未動；機器停在
-最後開出的 OS）。
+最後開出的 OS）+ 實機 `ac_cycle.sh` graceful 圈 PASS（**2026-11-04**；
+WiFi relay 執行機；DUT 開機後 193s 即 pingable、無 DHCP 漂移；drift-search
+transport 已在真實網段驗證）。
 
 ## 每圈的動作
 
@@ -55,6 +57,11 @@ precheck（DUT ping + BMC 回應 IPMI）
 無網路的 Windows Recovery（WinRE），DUT 超過 20 分鐘無法到達。所以
 **BMC 確認 power OFF 之前絕不切 relay**。`PRE_SHUTDOWN=0` 恢復舊的
 hard-cut 行為（**Windows 機器不要用**）。
+
+站點註記（2026-11-04）：**硬切**後這台 DUT 的網路約 8-10 分鐘
+不可見（OS 其實已開到畫面；I210 舊驅動 + EEE 是首嫌）。graceful 預設可
+規避：開機 193s 即 pingable。要做 hard-cut 診斷時，在 `os_flip.env` 設
+`DUT_WAIT>=600`（預設 240 只覆蓋 graceful 路徑，不覆蓋硬切盲區）。
 
 安全：relay 切斷有 trap 保護（任何離開路徑都還原）；precheck 在 BMC
 不回應 IPMI、或關機未確認 power off 時拒絕切斷；不碰持久開機順序。
@@ -129,6 +136,7 @@ CLI 環境變數  >  ./os_flip.env  >  互動式 discovery
 | `BMC_DEFAULT_USER` / `BMC_DEFAULT_PASS` | vendor 預設 | 只用於 discovery 的首次試探 |
 | `PRE_SHUTDOWN` | `1` |（ac_cycle.sh）切 relay 前確認 power OFF；`0` = 舊 hard cut（僅非 Windows） |
 | `AC_SETTLE` / `BMC_WAIT` | `6` / `180` |（ac_cycle.sh）relay 切斷秒數 / BMC 回來預算（秒） |
+| `DUT_WAIT` / `DUT_DRIFT_START` | `240` / `120` |（ac_cycle.sh）DUT 回來總預算 / 進 drift search 前的 known-IP 段（秒）；此板硬切需 `DUT_WAIT>=600` |
 
 ## 失敗語義
 
