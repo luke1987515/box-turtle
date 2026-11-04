@@ -32,6 +32,9 @@ PY3=${PY3:-python3}
 SCRIPT_COMMON_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ENV_FILE=${OS_FLIP_ENV_FILE:-$SCRIPT_COMMON_DIR/os_flip.env}
 ARP_SWEEP_BIN=${ARP_SWEEP_BIN:-$SCRIPT_COMMON_DIR/arp_sweep.py}
+SWEEP_HOSTS_BIN=${SWEEP_HOSTS_BIN:-$SCRIPT_COMMON_DIR/sweep_hosts.py}
+BMC_SWEEP_BIN=${BMC_SWEEP_BIN:-$SCRIPT_COMMON_DIR/bmc_sweep.py}
+BMC_SWEEP_PORT=${BMC_SWEEP_PORT:-443}     # BMC web-UI port used for the drift sweep
 ARP_LISTEN=${ARP_LISTEN:-4}        # seconds the sweep listens for replies
 
 # wait budgets (all overridable for smoke tests / sandboxes)
@@ -141,23 +144,69 @@ learn_mac() {
 
 # arp_sweep OUTFILE [CIDR]: L2 ARP sweep; writes "ip mac" lines to OUTFILE.
 # CIDR defaults to $DUT_NET, then to the runner's own /24. rc 0 = the sweep
-# ran (zero or more responders); rc 1 = the sweep itself failed.
+# ran (zero or more responders); rc 1 = the sweep itself failed (the WARN
+# says why -- on non-root boxes the sweep needs sudo, see below).
+# The sweep opens an AF_PACKET raw socket: as root it runs directly; as a
+# non-root user it is retried via sudo (passwordless if `sudo -n` works,
+# otherwise the password in $SUDO_PASS). With neither, it refuses loudly --
+# a blind sweep is worse than none (silent PermissionError would empty the
+# candidate list and waste the whole drift budget).
 arp_sweep() {
-  local out=$1 cidr=${2:-${DUT_NET:-}} rip errf n
+  local out=$1 cidr=${2:-${DUT_NET:-}} rip errf n ran=0
   [ -n "$cidr" ] || {
     rip=$(ip -4 -o addr show 2>/dev/null | awk '$2 != "lo" {split($4,a,"/"); print a[1]; exit}')
     [ -n "$rip" ] || { log "arp_sweep: cannot derive a scan range (set DUT_NET)"; return 1; }
     cidr="${rip%.*}.0/24"
   }
   errf=$(mktemp)
-  if ! "$PY3" "$ARP_SWEEP_BIN" "$cidr" "$ARP_LISTEN" > "$out" 2> "$errf"; then
-    log "WARN: arp_sweep failed (range $cidr): $(head -c 200 "$errf")"
+  if [ "$(id -u)" = "0" ]; then
+    "$PY3" "$ARP_SWEEP_BIN" "$cidr" "$ARP_LISTEN" > "$out" 2> "$errf" && ran=1
+  elif command -v sudo >/dev/null 2>&1; then
+    if sudo -n true 2>/dev/null; then
+      sudo -n "$PY3" "$ARP_SWEEP_BIN" "$cidr" "$ARP_LISTEN" > "$out" 2> "$errf" && ran=1
+    elif [ -n "${SUDO_PASS:-}" ]; then
+      printf '%s\n' "$SUDO_PASS" | sudo -S "$PY3" "$ARP_SWEEP_BIN" "$cidr" "$ARP_LISTEN" > "$out" 2> "$errf" && ran=1
+    fi
+  fi
+  if [ "$ran" != "1" ]; then
+    log "WARN: arp_sweep cannot run (range $cidr): needs root/CAP_NET_RAW, or sudo (set SUDO_PASS): $(head -c 200 "$errf")"
     rm -f "$errf"
     return 1
   fi
   rm -f "$errf"
   n=$(wc -l < "$out" 2>/dev/null || echo 0)
   log "arp sweep ($cidr): $n responder(s)"
+  return 0
+}
+
+# sweep_hosts OUTFILE [CIDR]: ICMP-ping sweep + kernel neigh MACs (no raw
+# socket needed -- the kernel's own ICMP path, which also works on Wi-Fi
+# runners where AF_PACKET injection is silently dropped). Writes "ip mac"
+# lines, the same format arp_sweep produces (sweep_find_ip consumes it).
+# rc 0 = sweep ran | rc 1 = failed.
+sweep_hosts() {
+  local out=$1 cidr=${2:-${DUT_NET:-}}
+  [ -n "$cidr" ] || { log "sweep_hosts: no range (set DUT_NET)"; return 1; }
+  if ! "$PY3" "$SWEEP_HOSTS_BIN" "$cidr" > "$out" 2>/dev/null; then
+    log "WARN: sweep_hosts failed (range $cidr)"
+    return 1
+  fi
+  log "ping sweep ($cidr): $(wc -l < "$out") live host(s)"
+  return 0
+}
+
+# bmc_sweep OUTFILE [CIDR]: TCP-connect sweep of the BMC web-UI port (plain
+# sockets -- no raw needed). One candidate IP per line; VERIFY a hit with
+# bmc_power_probe before trusting it (other boxes may serve the port).
+# rc 0 = sweep ran | rc 1 = failed.
+bmc_sweep() {
+  local out=$1 cidr=${2:-${DUT_NET:-}}
+  [ -n "$cidr" ] || { log "bmc_sweep: no range (set DUT_NET)"; return 1; }
+  if ! "$PY3" "$BMC_SWEEP_BIN" "$cidr" "$BMC_SWEEP_PORT" > "$out" 2>/dev/null; then
+    log "WARN: bmc_sweep failed (range $cidr, port $BMC_SWEEP_PORT)"
+    return 1
+  fi
+  log "bmc port sweep ($cidr :$BMC_SWEEP_PORT): $(wc -l < "$out") candidate(s)"
   return 0
 }
 
@@ -170,11 +219,13 @@ sweep_find_ip() {
   awk -v m="$mac" 'tolower($2) == m {print $1}' "$out" | sort -u
 }
 
-# resolve_endpoints: probe DUT (ping) and BMC (IPMI) at their known IPs. If an
-# endpoint is unreachable there and its MAC is known, ONE arp sweep searches
-# for its drifted IP; a live candidate is adopted (DUT_IP / BMC_IP updated,
-# CHANGED flags set). MACs are learned from the neigh cache when a probe
-# succeeds and the MAC is not yet known (LEARNED flags set).
+# resolve_endpoints: probe DUT (ping) and BMC (IPMI) at their known IPs. If
+# the DUT is unreachable and its MAC is known, a ping+neigh sweep searches
+# for its drifted IP; if the BMC stops answering IPMI, a port sweep of the
+# BMC web-UI port searches for it (a good IPMI answer verifies the hit). A
+# live candidate is adopted (DUT_IP / BMC_IP updated, CHANGED flags set).
+# MACs are learned from the neigh cache when a probe succeeds and the MAC is
+# not yet known (LEARNED flags set).
 # Sets DUT_RESOLVED / BMC_RESOLVED (0/1).
 resolve_endpoints() {
   local sweepfile ips cand
@@ -193,48 +244,48 @@ resolve_endpoints() {
   if [ $DUT_RESOLVED -eq 0 ] && [ -z "${DUT_MAC:-}" ]; then
     log "WARN: DUT $DUT_IP unreachable and DUT_MAC unset -- no drift search possible for the DUT"
   fi
-  if [ $BMC_RESOLVED -eq 0 ] && [ -z "${BMC_MAC:-}" ]; then
-    log "WARN: BMC $BMC_IP not answering IPMI and BMC_MAC unset -- no drift search possible for the BMC"
-  fi
-  if { [ $DUT_RESOLVED -eq 0 ] && [ -n "${DUT_MAC:-}" ]; } || \
-     { [ $BMC_RESOLVED -eq 0 ] && [ -n "${BMC_MAC:-}" ]; }; then
-    log "precheck: endpoint(s) unreachable at known IP(s) -- one ARP sweep to search for drifted IPs"
+  if [ $DUT_RESOLVED -eq 0 ] && [ -n "${DUT_MAC:-}" ]; then
+    log "precheck: DUT unreachable at known IP -- ping+neigh sweep for its MAC (${DUT_MAC})"
     sweepfile=$(mktemp)
-    if arp_sweep "$sweepfile"; then
-      if [ $DUT_RESOLVED -eq 0 ]; then
-        ips=$(sweep_find_ip "$sweepfile" "$DUT_MAC")
-        for cand in $ips; do
-          if ping -c1 -W2 "$cand" >/dev/null 2>&1; then
-            DUT_RESOLVED=1
-            if [ "$cand" != "$DUT_IP" ]; then
-              log "precheck: DUT found at new IP (DHCP drift): $DUT_IP -> $cand"
-              DUT_IP_CHANGED=1; DUT_IP=$cand
-            fi
-            break
+    if sweep_hosts "$sweepfile"; then
+      ips=$(sweep_find_ip "$sweepfile" "$DUT_MAC")
+      for cand in $ips; do
+        if ping -c1 -W2 "$cand" >/dev/null 2>&1; then
+          DUT_RESOLVED=1
+          if [ "$cand" != "$DUT_IP" ]; then
+            log "precheck: DUT found at new IP (DHCP drift): $DUT_IP -> $cand"
+            DUT_IP_CHANGED=1; DUT_IP=$cand
           fi
-        done
-      fi
-      if [ $BMC_RESOLVED -eq 0 ]; then
-        ips=$(sweep_find_ip "$sweepfile" "$BMC_MAC")
-        for cand in $ips; do
-          if ipmi_try "$cand" chassis power status >/dev/null 2>&1; then
-            BMC_RESOLVED=1
-            if [ "$cand" != "$BMC_IP" ]; then
-              log "precheck: BMC found at new IP (DHCP drift): $BMC_IP -> $cand"
-              BMC_IP_CHANGED=1; BMC_IP=$cand
-            fi
-            break
-          fi
-        done
-      fi
+          break
+        fi
+      done
     fi
     rm -f "$sweepfile"
+  fi
+  if [ $BMC_RESOLVED -eq 0 ]; then
+    log "precheck: BMC not answering IPMI -- port sweep (:$BMC_SWEEP_PORT) + IPMI verify"
+    bmcfile=$(mktemp)
+    if bmc_sweep "$bmcfile"; then
+      while read -r cand; do
+        [ -n "$cand" ] || continue
+        if ipmi_try "$cand" chassis power status >/dev/null 2>&1; then
+          BMC_RESOLVED=1
+          if [ "$cand" != "$BMC_IP" ]; then
+            log "precheck: BMC found at new IP (DHCP drift): $BMC_IP -> $cand"
+            BMC_IP_CHANGED=1; BMC_IP=$cand
+          fi
+          break
+        fi
+      done < "$bmcfile"
+    fi
+    rm -f "$bmcfile"
   fi
 }
 
 # wait_bmc_up: wait for the BMC (IPMI) after the relay restore. Stage 1 probes
 # the known $BMC_IP; past BMC_DRIFT_START, stage 2 repeats (every DRIFT_POLL):
-# arp sweep -> BMC_MAC match -> IPMI-probe the matched IP -> adopt. Sets
+# bmc port sweep -> IPMI-probe each candidate -> adopt. No MAC needed (the
+# port + a good IPMI answer IS the fingerprint). Sets
 # BMC_UP (0/1), BMC_PSTAT (on/off/unknown); updates BMC_IP when found at a new
 # IP (BMC_IP_CHANGED=1). rc 0 = up.
 wait_bmc_up() {
@@ -253,29 +304,14 @@ wait_bmc_up() {
     fi
     sleep "$POLL"
   done
-  if [ -z "${BMC_MAC:-}" ]; then
-    log "WARN: BMC $BMC_IP still not answering after ${BMC_DRIFT_START}s and BMC_MAC unset -- no drift search possible; keeping the known-IP probe until the budget"
-    while :; do
-      now=$(date +%s)
-      [ $((now - t0)) -ge "$BMC_WAIT" ] && break
-      if bmc_power_probe "$BMC_IP"; then
-        BMC_UP=1; BMC_PSTAT=$BPP_STATE
-        log "BMC $BMC_IP is back (power state: $BMC_PSTAT)"
-        return 0
-      fi
-      sleep "$POLL"
-    done
-    log "WARN: BMC $BMC_IP not back within ${BMC_WAIT}s"
-    return 1
-  fi
-  log "BMC $BMC_IP not back after ${BMC_DRIFT_START}s -- drift search (arp sweep + BMC_MAC ${BMC_MAC})"
+  log "BMC $BMC_IP not back after ${BMC_DRIFT_START}s -- drift search (bmc port sweep :${BMC_SWEEP_PORT} + IPMI verify)"
   sweepfile=$(mktemp)
   while :; do
     now=$(date +%s)
     [ $((now - t0)) -ge "$BMC_WAIT" ] && break
-    arp_sweep "$sweepfile" >/dev/null 2>&1
-    ips=$(sweep_find_ip "$sweepfile" "$BMC_MAC")
-    for cand in $ips; do
+    bmc_sweep "$sweepfile"
+    while read -r cand; do
+      [ -n "$cand" ] || continue
       if bmc_power_probe "$cand"; then
         BMC_UP=1; BMC_PSTAT=$BPP_STATE
         if [ "$cand" != "$BMC_IP" ]; then
@@ -288,19 +324,20 @@ wait_bmc_up() {
         return 0
       fi
     done
-    log "drift search: no live BMC at the MAC yet (candidates: $(echo $ips))"
+    log "drift search: no live BMC yet (candidates: $(tr '\n' ' ' < "$sweepfile"))"
     sleep "$DRIFT_POLL"
   done
   rm -f "$sweepfile"
-  log "WARN: BMC not found (known IP $BMC_IP, MAC ${BMC_MAC}) within ${BMC_WAIT}s"
+  log "WARN: BMC not found (known IP $BMC_IP, port sweep :$BMC_SWEEP_PORT) within ${BMC_WAIT}s"
   return 1
 }
 
 # wait_dut_up: wait for the DUT (ping) after the relay restore. Stage 1 pings
 # the known $DUT_IP; past DUT_DRIFT_START, stage 2 repeats (every DRIFT_POLL):
-# arp sweep -> DUT_MAC match -> ping the matched IP -> adopt. The sweep uses
-# its own raw ARP evidence (never the kernel neigh cache), so stale ARP
-# entries from before the cut cannot fake a hit. Sets DUT_UP (0/1); updates
+# ping+neigh sweep -> DUT_MAC match -> ping the matched IP -> adopt. The MAC
+# comes from the kernel neigh cache after a live ping, so stale entries from
+# before the cut cannot fake a hit. No raw socket needed (Wi-Fi-safe).
+# Sets DUT_UP (0/1); updates
 # DUT_IP when found at a new IP (DUT_IP_CHANGED=1). rc 0 = up.
 wait_dut_up() {
   local t0 now cand ips sweepfile
@@ -333,12 +370,12 @@ wait_dut_up() {
     log "WARN: DUT ping not UP within ${DUT_WAIT}s (it may still be booting)"
     return 1
   fi
-  log "DUT $DUT_IP not up after ${DUT_DRIFT_START}s -- drift search (arp sweep + DUT_MAC ${DUT_MAC})"
+  log "DUT $DUT_IP not up after ${DUT_DRIFT_START}s -- drift search (ping+neigh sweep, DUT_MAC ${DUT_MAC})"
   sweepfile=$(mktemp)
   while :; do
     now=$(date +%s)
     [ $((now - t0)) -ge "$DUT_WAIT" ] && break
-    arp_sweep "$sweepfile" >/dev/null 2>&1
+    sweep_hosts "$sweepfile" || log "WARN: sweep round failed (see above) -- retrying"
     ips=$(sweep_find_ip "$sweepfile" "$DUT_MAC")
     for cand in $ips; do
       if ping -c1 -W1 "$cand" >/dev/null 2>&1; then

@@ -87,7 +87,7 @@ def main():
     sock.settimeout(0.2)
 
     def frame(target_ip_bin):
-        arp = struct.pack("!HHBBH", 1, ETH_P_ARP, 6, 4, 1, 0)
+        arp = struct.pack("!HHBBH", 1, ETH_P_ARP, 6, 4, 1)
         arp += mac + srcip_bin + b"\x00" * 6 + target_ip_bin
         return b"\xff" * 6 + struct.pack("!H", ETH_P_ARP) + arp
 
@@ -98,7 +98,7 @@ def main():
         if ip_bin == srcip_bin:
             continue
         try:
-            sock.sendto(frame(ip_bin), ("", 0))
+            sock.send(frame(ip_bin))  # send(): sendto(("", 0)) hits ENODEV on some kernels/wifi ifaces
         except OSError as e:
             sys.exit("arp_sweep: send failed on %s: %s" % (ifc, e))
 
