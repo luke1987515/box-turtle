@@ -61,7 +61,7 @@ load_env_file() {
     case $line in ''|\#*) continue;; esac
     k=${line%%=*}; v=${line#*=}
     case $k in
-      DUT_IP|DUT_MAC|DUT_NET|BMC_IP|BMC_USER|BMC_PASS|WIN_USER|WIN_PASS|UBU_USER|UBU_PASS|SITE_NAME|LINUX_NAME|KNOWN_OUI|RELAY_OFF_CMD|RELAY_ON_CMD|BMC_DEFAULT_USER|BMC_DEFAULT_PASS)
+      DUT_IP|DUT_MAC|DUT_NET|BMC_IP|BMC_USER|BMC_PASS|WIN_USER|WIN_PASS|UBU_USER|UBU_PASS|SITE_NAME|LINUX_NAME|KNOWN_OUI|RELAY_OFF_CMD|RELAY_ON_CMD|BMC_DEFAULT_USER|BMC_DEFAULT_PASS|RESTORE_BIOS_STATE)
         [ -n "${!k:-}" ] && continue
         export "$k=$v";;
     esac
@@ -113,6 +113,12 @@ PRE_PING_TRIES=${PRE_PING_TRIES:-3}
 # reset = legacy: one-shot bootdev while running + chassis power reset (WARM)
 SHUTDOWN_MODE=${SHUTDOWN_MODE:-clean}
 SHUTDOWN_TIMEOUT=${SHUTDOWN_TIMEOUT:-60}
+# precheck console-redirection gate (bios_redir.sh): if the BIOS console
+# redirection was OFF when found, the gate repairs it (nested /Bios/SD PATCH
+# + cold cycle + LIVE re-verify). After the run, RESTORE_BIOS_STATE:
+#   0 (default) leave it ON (the usable baseline for SOL work)
+#   1           restore the found (OFF) state -- costs one extra cold cycle
+RESTORE_BIOS_STATE=${RESTORE_BIOS_STATE:-0}
 # DUT identity: the IP drifts with DHCP; when DUT_MAC is set, DUT_IP is
 # (re)resolved from the ARP/neigh cache on every check.
 DUT_NET=${DUT_NET:-}
@@ -672,6 +678,48 @@ config_missing() {
   printf '%s' "$m"
 }
 
+# BIOS console-redirection gate (AMI Tuca boards, precheck stage). SOL UEFI
+# navigation needs TER001 + TER002 + IPMI400 all on; OFF means banner-only
+# SOL and a guaranteed setup-wait death (2026-11-07 field failure). The gate
+# runs BEFORE any power action: OFF -> auto-repair via bios_redir.sh (nested
+# PATCH + cold cycle + LIVE re-verify). ABSENT (non-AMI/Tuca boards) and
+# REDFISH_DOWN are WARN-only: the gate must never block a site whose BMC does
+# not expose these attributes. Sets BIOS_WAS_OFF=1 when a repair happened
+# (main() uses it for the optional post-run restore).
+bios_redir_gate() {
+  local statef="$LOG_DIR/bios_redir_pre.txt" verdict
+  BIOS_WAS_OFF=0
+  if [ ! -f "$SCRIPT_DIR/bios_redir.sh" ] || [ -z "$BMC_IP" ]; then
+    log "precheck: console-redirection gate skipped (no bios_redir.sh / no BMC_IP)"
+    return 0
+  fi
+  bash "$SCRIPT_DIR/bios_redir.sh" state > "$statef" 2>&1
+  verdict=$(awk -F': ' '/^VERDICT: / {print $2}' "$statef" | head -1)
+  case $verdict in
+    ON)
+      log "precheck: BIOS console redirection ON ($(grep -m1 '^ATTRS: ' "$statef" | sed 's/^ATTRS: //'))"
+      ;;
+    ABSENT)
+      log "precheck: WARN: console-redirection attributes not exposed by this BMC (non-AMI/Tuca board?) -- gate skipped"
+      ;;
+    REDFISH_DOWN|"")
+      log "precheck: WARN: Redfish unavailable on $BMC_IP (IPMI is up) -- gate skipped"
+      ;;
+    OFF)
+      log "precheck: BIOS console redirection OFF ($(grep -m1 '^ATTRS: ' "$statef" | sed 's/^ATTRS: //')) -- SOL UEFI nav would be blind (2026-11-07 failure mode)"
+      log "precheck: auto-repair: nested /Bios/SD PATCH + cold cycle + LIVE re-verify"
+      if ! bash "$SCRIPT_DIR/bios_redir.sh" fix 2>&1 | tee -a "$LOG_FILE"; then
+        log "PRECHECK FAIL: console-redirection repair failed -- aborting (no further power actions)"
+        FAIL_COUNT=$((FAIL_COUNT+1))
+        return 1
+      fi
+      BIOS_WAS_OFF=1
+      log "precheck: console redirection repaired and LIVE-verified ON (pre-run OFF state saved in bios_redir_pre.txt)"
+      ;;
+  esac
+  return 0
+}
+
 precheck() {
   log "---- PRECHECK ----"
   # Identity first: with DUT_MAC set, sweep the segment and resolve the
@@ -708,6 +756,18 @@ precheck() {
     return 1
   fi
   log "precheck: BMC reachable (status in precheck_bmc.txt)"
+  if ! bios_redir_gate; then
+    return 1
+  fi
+  if [ "${BIOS_WAS_OFF:-0}" = 1 ]; then
+    # the repair's cold cycle rebooted the machine: wait for the OS to come
+    # back BEFORE the SSH probe (a Windows boot can take several minutes).
+    local rwaited=0
+    while [ $rwaited -lt 360 ] && ! ping_ok; do
+      sleep 15; rwaited=$((rwaited+15))
+    done
+    log "precheck: machine back after the repair cold cycle (ping UP, waited ${rwaited}s)"
+  fi
   probe_one "$WIN_USER" "$WIN_PASS" windows
   if [ $PROBE_RC -eq 0 ]; then
     CURRENT_OS="windows"
@@ -889,7 +949,7 @@ main() {
   done
   log "==== os_flip start: site=$SITE_NAME cycles=$CYCLES DUT=${DUT_IP:-<by MAC $DUT_MAC>} BMC=$BMC_IP ===="
   log "runner: $(hostname) tz=$(date '+%Z %z') | log dir: $LOG_DIR"
-  log "config: SETUP_TIMEOUT=$SETUP_TIMEOUT BOOT_TIMEOUT=$BOOT_TIMEOUT PROBE_TIMEOUT=$PROBE_TIMEOUT ID_PROBE_BUDGET=${ID_PROBE_BUDGET:-240} COLLECT_TIMEOUT=$COLLECT_TIMEOUT PRE_PING_TRIES=$PRE_PING_TRIES SHUTDOWN_MODE=$SHUTDOWN_MODE SHUTDOWN_TIMEOUT=$SHUTDOWN_TIMEOUT DUT_MAC=${DUT_MAC:-<none>} DUT_NET=$DUT_NET LINUX_NAME=${LINUX_NAME:-<none>}"
+  log "config: SETUP_TIMEOUT=$SETUP_TIMEOUT BOOT_TIMEOUT=$BOOT_TIMEOUT PROBE_TIMEOUT=$PROBE_TIMEOUT ID_PROBE_BUDGET=${ID_PROBE_BUDGET:-240} COLLECT_TIMEOUT=$COLLECT_TIMEOUT PRE_PING_TRIES=$PRE_PING_TRIES SHUTDOWN_MODE=$SHUTDOWN_MODE SHUTDOWN_TIMEOUT=$SHUTDOWN_TIMEOUT RESTORE_BIOS_STATE=$RESTORE_BIOS_STATE DUT_MAC=${DUT_MAC:-<none>} DUT_NET=$DUT_NET LINUX_NAME=${LINUX_NAME:-<none>}"
   # profile gate BEFORE the precheck: config-level refusals (no power
   # actions). design 5.3: profile missing -> exit 2 + --discover hint;
   # bmc_ip/dut_mac mismatch -> exit 3 (site moved or wrong env).
@@ -924,6 +984,18 @@ main() {
     sleep 5
   done
   summary
+  if [ "${BIOS_WAS_OFF:-0}" = "1" ]; then
+    if [ "${RESTORE_BIOS_STATE:-0}" = "1" ]; then
+      log "==== console-redirection restore (RESTORE_BIOS_STATE=1; found OFF pre-run) ===="
+      if bash "$SCRIPT_DIR/bios_redir.sh" restore "$LOG_DIR/bios_redir_pre.txt" 2>&1 | tee -a "$LOG_FILE"; then
+        log "console-redirection restored to the pre-run state (extra cold cycle consumed)"
+      else
+        log "!! console-redirection restore FAILED -- machine left with redirection ON (repair it before the next run)"
+      fi
+    else
+      log "console-redirection left ON (found OFF pre-run; set RESTORE_BIOS_STATE=1 to restore the found state after a run)"
+    fi
+  fi
   log "==== os_flip end: machine left on $CURRENT_OS; persistent order unchanged ===="
   if [ $failed -ne 0 ] || [ $ran -ne "$CYCLES" ]; then
     exit 1
