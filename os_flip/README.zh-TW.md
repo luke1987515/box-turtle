@@ -26,12 +26,17 @@ SSH clean shutdown（或 legacy warm reset）
   -> 等 System Power: off
   -> 斷電中 latch `chassis bootdev bios option=efiboot`
   -> 冷開機
-  -> SOL pty: 等 "Aptio Setup" -> RIGHT x7 (Save & Exit tab)
-     -> DOWN x10 (Ubuntu) / DOWN x9 (Windows) -> ENTER  （一次性交接）
+  -> SOL pty: 等 "Aptio Setup" -> RIGHT 到 "Save & Exit" tab（文字搜索，
+     上限 12 次）-> DOWN x <profile target_..._down> -> ENTER（一次性交接）
   -> 串 SOL + poll ping 到 DUT UP
   -> 鑑定開機 OS（SOL "EFI stub" 線索 + SSH probe + hostname）
   -> 抓該 OS 系統資訊
 ```
+
+按鍵路徑是 **profile 驅動**（見[站點 profile](#站點-profile新-dut-五步動線)）：
+DOWN 次數與逐項的 name/描述驗證都來自站點的 profile。第一次 DOWN 後
+**即時驗證 item_2**（name + 描述欄）；不符 = UEFI 版面漂移，該圈以
+`LAYOUT DRIFT` 中止（重跑 `--discover`）——絕不靜默選錯 OS。
 
 開機確認 = **SOL 串流 + ping**；ping 是 ground truth（有些平台開機期 SOL
 會完全靜音）。OS 鑑定以重試輪次進行，因為 SSH daemon 可能比第一次 ping
@@ -94,6 +99,59 @@ cd os_flip
 CLI 環境變數  >  ./os_flip.env  >  互動式 discovery
 ```
 
+## 站點 profile（新 DUT 五步動線）
+
+Save & Exit 導航表是**每站一份**（profile），不再寫死在程式碼裡。依
+`SITE_NAME` 解析：
+
+```
+profiles/<SITE_NAME>.conf   runner 本地（gitignored）-- 最新 --discover 校準
+sites/<SITE_NAME>.conf      repo 基準（無機密；IP/MAC 僅測試 LAN 內址）
+（兩者都沒有）              cycle 以 exit 2 拒絕 -- 先跑 --discover
+```
+
+階段表：
+
+| 階段 | 指令 | 電源動作 | profile |
+|---|---|---|---|
+| readiness | `./os_flip.sh --check` | 無 | 唯讀（身份 gate） |
+| setup | `./os_flip.sh --discover` | 依該站的 `power_entry` 進 UEFI setup | **寫入**（約 5 分鐘） |
+| run | `./os_flip.sh <N>` | N 圈 | 唯讀 |
+
+**`power_entry`**（在 profile 裡，schema v1.1）：該站進 UEFI 的方式。
+`cold_on`（預設）= clean shutdown → 斷電時 latch bootdev → **冷開機**。
+`warm_reset` = 機器保持開機 → 開機中設 bootdev → **暖 reset**。有些平台
+（aic_1x DUT / Tuca_0.09.0）冷開機會**忽略 one-shot latch**（2026-11-07
+驗證：三次 cold-on 全超時，SOL 顯示 "Press <DEL> or <ESC> to enter setup"
+後直接進 persistent order）——它的基準寫 `power_entry=warm_reset`。
+profile 是進入方式的**唯一來源**；`SHUTDOWN_MODE` 只在 profile 為
+`cold_on` 時才生效。
+
+新 DUT 五步動線：
+
+1. `cp os_flip.env.example os_flip.env` — 填身份 + 帳密，設 `SITE_NAME`
+   （新名字）與 `LINUX_NAME`（例：`ubuntu`）。若該站是 repo 基準之一
+   （`sites/*.conf`），它的 `power_entry` 自動生效；全新站預設 `cold_on`
+   （若它的 BIOS 忽略冷開機 one-shot，先加 `sites/<SITE>.conf` 寫
+   `power_entry=warm_reset` 再走第 3 步）。
+2. `./os_flip.sh --check` — 連通性 + env。第一次會 exit 2（還沒有
+   profile）— 預期行為。
+3. `./os_flip.sh --discover` — 約 5 分鐘：依 `power_entry` 進 UEFI setup、
+   自動走完整個 Save & Exit tab（RIGHT 到 tab 標籤、DOWN 到高亮 wrap
+   回第一項），寫入 `profiles/<SITE_NAME>.conf`、印出對照表（兩個目標有
+   標記，請確認），再把機器還原到原來的 OS（會驗證）。
+4. `./os_flip.sh --check` 再跑一次 — 全綠。
+5. `./os_flip.sh 1` — shakedown 一圈；之後才跑正式測試。
+
+漂移語意（絕不靜默選錯 OS）：
+
+- **身份 gate** — profile 的 `bmc_ip`/`dut_mac`/`site` 與 env 比對；
+  防 site 搬遷 / env 用錯（exit 3：重跑 `--discover`）。
+- **版面 gate** — 第一次 DOWN 後即時驗證 item_2（name + 描述欄）。
+  **韌體更新或 UEFI 重置**後，預期第一個 cycle 會以 `LAYOUT DRIFT`
+  中止；修正 = `./os_flip.sh --discover` + `./os_flip.sh 1` shakedown。
+- profile 的 `firmware=` 欄**僅供資訊**，不作為 gate。
+
 ## 首次執行偵測（discovery）
 
 兩種身份偵測模式，依序自動：
@@ -120,6 +178,8 @@ CLI 環境變數  >  ./os_flip.env  >  互動式 discovery
 
 | 變數 | 預設 | 意義 |
 |---|---|---|
+| `SITE_NAME` | —（cycle/discover/check 必填） | profile 名稱 -> `profiles/<SITE>.conf` > `sites/<SITE>.conf` |
+| `LINUX_NAME` | —（`--discover` 必填） | Linux 側 OS 名稱 token（Boot Override 列的 squash 子串比對） |
 | `DUT_IP` / `DUT_MAC` | —（二擇一必填） | DUT 身份；MAC 會在 DHCP 漂移時重解 IP |
 | `BMC_IP`, `BMC_USER`, `BMC_PASS` | —（必填） | BMC IPMI 存取 |
 | `WIN_USER`/`WIN_PASS`, `UBU_USER`/`UBU_PASS` | 帳號有預填 | DUT OS 帳號 |

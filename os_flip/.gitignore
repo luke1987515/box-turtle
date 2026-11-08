@@ -1,5 +1,7 @@
 # local site config (contains passwords) -- NEVER commit
 os_flip.env
+# runner-local profiles (latest --discover calibrations; baselines live in sites/)
+profiles/
 __pycache__/
 *.pyc
 # run artifacts

@@ -30,12 +30,20 @@ clean shutdown via SSH (or legacy warm reset)
   -> wait for System Power: off
   -> latch `chassis bootdev bios option=efiboot` while power is off
   -> cold power on
-  -> SOL pty: wait "Aptio Setup" -> RIGHT x7 (Save & Exit tab)
-     -> DOWN x10 (Ubuntu) / DOWN x9 (Windows) -> ENTER  (one-shot handoff)
+  -> SOL pty: wait "Aptio Setup" -> RIGHT until the "Save & Exit" tab
+     (text search, cap 12) -> DOWN x <profile target_..._down> -> ENTER
+     (one-shot handoff)
   -> stream SOL + poll ping until the DUT is UP
   -> identify the booted OS (SOL "EFI stub" hint + SSH probe + hostname)
   -> collect that OS's system info
 ```
+
+The key path is **profile driven** (see [Site profiles](#site-profiles-new-dut-five-step-flow)):
+the DOWN counts and the per-item name/description verifies come from the
+site's profile. After the **first** DOWN, item_2 is live-verified
+(name + description panel); a mismatch means the UEFI layout drifted and
+the cycle aborts with `LAYOUT DRIFT` (re-run `--discover`) — never a
+silent wrong-OS pick.
 
 Boot confirmation is **SOL stream + ping**; ping is the ground truth (SOL may
 be silent during boot on some platforms). OS identification runs in retry
@@ -108,6 +116,64 @@ never asks again. Resolution priority:
 CLI environment variables  >  ./os_flip.env  >  interactive discovery
 ```
 
+## Site profiles (new DUT: five-step flow)
+
+The Save & Exit navigation table is **per-site**, not hardcoded. Profile
+resolution by `SITE_NAME`:
+
+```
+profiles/<SITE_NAME>.conf   runner local (gitignored) -- latest --discover calibration
+sites/<SITE_NAME>.conf      repo baseline (no secrets; test-LAN IPs/MACs only)
+(neither)                   the cycle refuses with exit 2 -- run --discover first
+```
+
+Phases:
+
+| phase | command | power actions | profile |
+|---|---|---|---|
+| readiness | `./os_flip.sh --check` | none | read (identity gate) |
+| setup | `./os_flip.sh --discover` | enter UEFI setup per the site's `power_entry` | **written** (~5 min) |
+| run | `./os_flip.sh <N>` | N cycles | read-only |
+
+**`power_entry`** (in the profile, schema v1.1): how this site's UEFI is
+entered. `cold_on` (default) = clean shutdown -> bootdev latched while off
+-> COLD power on. `warm_reset` = machine stays on -> bootdev while running
+-> WARM power reset. Some platforms (the aic_1x DUT / Tuca_0.09.0) ignore
+the one-shot latch on a COLD boot (verified 2026-11-07: three cold-on
+attempts timed out; SOL showed "Press <DEL> or <ESC> to enter setup" then
+booted the persistent order) -- their baselines say `power_entry=warm_reset`.
+The profile is the single source of truth for the entry mode; `SHUTDOWN_MODE`
+only applies when the profile says `cold_on`.
+
+New DUT five-step flow:
+
+1. `cp os_flip.env.example os_flip.env` — fill the identity + credentials,
+   set `SITE_NAME` (a new name) and `LINUX_NAME` (e.g. `ubuntu`). If the
+   site is one of the repo baselines (`sites/*.conf`), its `power_entry`
+   already applies; a brand-new site defaults to `cold_on` (if its BIOS
+   ignores the cold-boot one-shot, add `sites/<SITE>.conf` with
+   `power_entry=warm_reset` before step 3).
+2. `./os_flip.sh --check` — connectivity + env. First time it exits 2
+   (no profile yet) — expected.
+3. `./os_flip.sh --discover` — ~5 minutes: enter UEFI setup per
+   `power_entry`, auto-walk the whole Save & Exit tab (RIGHT until the tab
+   label, then DOWN until the highlight wraps), write
+   `profiles/<SITE_NAME>.conf`, print the item table with the two target
+   marks (check it), and return the machine to its original OS (verified).
+4. `./os_flip.sh --check` again — all green.
+5. `./os_flip.sh 1` — shakedown cycle; then run the full test.
+
+Drift semantics (never a silent wrong-OS pick):
+
+- **identity gate** — `bmc_ip`/`dut_mac`/`site` in the profile vs the env
+  catches a moved site or a wrong `os_flip.env` (exit 3: re-run
+  `--discover`).
+- **layout gate** — the first item (item_2) is live-verified after the
+  first DOWN (name + description panel). After a **firmware update or a
+  UEFI reset** expect the first cycle to abort with `LAYOUT DRIFT`; fix
+  with `./os_flip.sh --discover` and a `./os_flip.sh 1` shakedown.
+- the profile's `firmware=` field is **informational only**, never a gate.
+
 ## Discovery (first run)
 
 Two identity-discovery modes, automatic in this order:
@@ -141,6 +207,8 @@ cut, no writes) — useful for sanity-checking the environment.
 
 | Variable | Default | Meaning |
 |---|---|---|
+| `SITE_NAME` | — (required: cycle/discover/check) | profile name -> `profiles/<SITE>.conf` > `sites/<SITE>.conf` |
+| `LINUX_NAME` | — (required for `--discover`) | Linux-side OS name token (squash-substring in the Boot Override list) |
 | `DUT_IP` / `DUT_MAC` | — (required: one of them) | DUT identity; the MAC re-resolves the IP on DHCP drift |
 | `BMC_IP`, `BMC_USER`, `BMC_PASS` | — (required) | BMC IPMI access |
 | `WIN_USER`/`WIN_PASS`, `UBU_USER`/`UBU_PASS` | user names pre-filled | DUT OS accounts |

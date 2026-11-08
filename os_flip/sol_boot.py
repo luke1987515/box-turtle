@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
-"""
+"""sol_boot.py -- profile-driven Boot Override switch + site discovery
+(SOL pty, Aptio/AMI).
+
 Provenance: designed & validated by luke1987515; AI-assisted development
 (Hermes Agent by Nous Research; self-hosted Qwen3.8-27B). Verified on real
 hardware 2026-11-01 and 2026-11-02: 20/20 os_flip cycles PASS across two
-10-cycle runs; persistent boot order unchanged.
-"""
-"""sol_boot.py -- Boot Override one-shot OS switch via SOL pty (Aptio/AMI).
+10-cycle runs; persistent boot order unchanged. Site-profile rework per
+DESIGN-site-profiles.md v1 (approved 2026-11-07): the hardcoded Save & Exit
+item table is replaced by per-site profiles, and --discover auto-calibrates
+a new DUT in ~5 minutes.
 
 Verified path (2026-10, reference dual-OS DUT):
   sol deactivate -> wait SOL_DEACT_WAIT (10s; the BMC SOL engine needs this
-  gap before re-attach) -> chassis bootdev bios option=efiboot -> open SOL
-  pty session -> wait SOL_PRE_RESET_WAIT (8s) -> chassis power reset (WARM;
-  a cold boot ignores the one-shot on this platform) -> wait "Aptio Setup"
-  -> RIGHT x7 (arrival: "Save Options" block on the Save & Exit tab) ->
-  DOWN x9 (Windows Boot Manager entry) or DOWN x10 (Ubuntu entry) -> ENTER.
+  gap before re-attach) -> open SOL pty session -> chassis power on/reset
+  (bootdev bios option=efiboot latched while off, or one-shot while running
+  in legacy reset mode) -> wait "Aptio Setup" -> RIGHT until the "Save &
+  Exit" tab label is seen (cap 12) -> DOWN x <profile target_..._down> ->
+  ENTER.
 
 ENTER on a Boot Override entry answers with a ~24-byte screen clear
 (\\x1b[2J \\x1b[1;1H, twice) = the BIOS handing off to boot. That clear is
@@ -24,60 +27,84 @@ abort/power reset (an abort reset after the handoff kills the target boot
 Boot confirmation = SOL stream + ping polling. SOL may be silent during
 boot on this platform (even fully silent); ping is the ground truth.
 
-Usage:
-  sol_boot.py BMC_IP BMC_USER BMC_PASS TARGET RAW_FILE CLEAN_FILE TRACE_FILE
-             SETUP_TIMEOUT BOOT_TIMEOUT DUT_IP ABORT_FLAG POWER_ACTION
-             (POWER_ACTION: 'reset' = legacy warm reset | 'on' = machine is
-             already off with bootdev latched, COLD power on)
+Modes (argv[1]):
+  cycle BMC_IP BMC_USER BMC_PASS TARGET RAW_FILE CLEAN_FILE TRACE_FILE
+        SETUP_TIMEOUT BOOT_TIMEOUT DUT_IP ABORT_FLAG POWER_ACTION PROFILE_FILE
+        TARGET: 'windows' | 'linux' (the profile's target_..._down keys)
+        POWER_ACTION: 'reset' = legacy warm reset | 'on' = machine already
+        off with bootdev latched, COLD power on
+        The profile is opened READ-ONLY (run phase is never written to).
+        The first DOWN is live-verified against item_2 (name+desc):
+        mismatch = LAYOUT DRIFT -> the cycle aborts (exit 6), safe exit,
+        re-run --discover.
+  discover BMC_IP BMC_USER BMC_PASS RAW_FILE CLEAN_FILE TRACE_FILE
+        SETUP_TIMEOUT BOOT_TIMEOUT DUT_IP ABORT_FLAG PROFILE_OUT SITE_NAME
+        LINUX_NAME DUT_MAC POWERENTRY
+        POWERENTRY: 'cold_on' (machine off + bootdev latched, COLD power on)
+        | 'warm_reset' (machine running, bootdev while running, WARM reset --
+        required on platforms that ignore the one-shot on cold boot, e.g.
+        the aic_1x DUT / Tuca_0.09.0, verified 2026-11-06).
+        Setup phase (~5 min): enter UEFI setup per POWERENTRY, navigate to
+        the Save & Exit tab (RIGHT until the tab label is seen, cap 12),
+        enumerate
+        every item (DOWN step by step; stop at wrap back to the first item
+        or the 24-item safety cap), pair the targets (windows = the row
+        starting with "Windows Boot Manager"; linux = the row containing
+        LINUX_NAME, squash comparison), write PROFILE_OUT atomically (tmp +
+        mv) and print the human-readable item table, then leave setup via
+        Discard Changes and Exit (Yes/No dialog: LEFT -> ENTER, calibrated
+        sequence).
+  setup-exit BMC_IP BMC_USER BMC_PASS RAW_FILE CLEAN_FILE TRACE_FILE
+        SETUP_TIMEOUT BOOT_TIMEOUT DUT_IP
+        RECOVERY: the machine must be OFF (a one-shot bootdev latch may be
+        active). Opens SOL, cold-powers on and watches the boot: if
+        'Aptio Setup' appears, leaves it via Discard Changes and Exit
+        (one verified DOWN + the calibrated discard sequence); if not,
+        the machine booted normally (latch dropped) and nothing is done.
+        Exit: 0 = discard done or no-setup no-op | 2 = plain-reset fallback
+        done (normal boot), or precondition not met (machine already on) |
+        5 = power on failed | 7 = STUCK in setup.
+  gate PROFILE_FILE BMC_IP DUT_MAC [SITE_NAME]
+        Read-only identity gate (no hardware touched). Exit 0 ok | 2
+        profile missing/unparseable | 3 identity or site mismatch (site
+        move or the env is wrong -> re-run --discover).
+  resolve SITE_NAME BASE_DIR
+        Profile resolution: BASE_DIR/profiles/<SITE>.conf >
+        BASE_DIR/sites/<SITE>.conf. Prints the winning path; exit 0 found
+        | 2 not found (stderr lists the available sites).
 
 Env (defaults are the verified values; shrunk only for sandbox testing):
   SOL_DEACT_WAIT=10  SOL_PRE_RESET_WAIT=8  SOL_PRE_POWERON_WAIT=3
-  SOL_KEY_SETTLE=3.0  SOL_DOWN_SETTLE=4.0
+  SOL_KEY_SETTLE=3.0  SOL_DOWN_SETTLE=4.0  SOL_SETUP_RETRIES=2
+  SOL_UP_TAIL=15
   DUT_MAC/DUT_NET: when DUT_MAC set, the boot wait re-resolves the DUT IP
   by MAC if the DUT is silent for 30s (DHCP drift guard)
 
 Exit codes:
   0 ok | 1 setup timeout | 2 nav fail (safe exit: SOL closed, plain power
   reset sent, normal boot waited) | 3 boot not confirmed | 4 bootdev set
-  failed | 5 power reset failed
+  failed | 5 power reset failed | 6 LAYOUT DRIFT (cycle first-item
+  mismatch) or discover pairing fail (safe exit done; re-run --discover) |
+  7 machine may be sitting in UEFI setup (physical intervention required)
 """
 import os
-import pty
-import tty
+import re
 import time
 import select
 import signal
 import subprocess
 import sys
-import re
 import threading
 
 UP = b"\x1b[A"
 DOWN = b"\x1b[B"
 RIGHT = b"\x1b[C"
+LEFT = b"\x1b[D"
 ENTER = b"\x0d"
 ESC = b"\x1b"
 
-# Save & Exit tab: 11 selectable items, top to bottom (verified 2026-10-28,
-# description panel checked item by item). ITEMS[i] = description-panel
-# substring for the item highlighted after DOWN press i+1 (None = Boot
-# Override entry rows, which have no description).
-ITEMS = [
-    "without saving any changes",                                        # item 2
-    "Reset the system after saving the changes",                         # item 3
-    "Reset system setup without saving any changes",                     # item 4
-    "Save Changes done so far to any of the setup option",               # item 5
-    "Discard Changes done so far",                                       # item 6
-    "Restore/Load Default values for all the setup options",             # item 7
-    "Save the changes done so far as User Defaults",                     # item 8
-    "Restore the User Defaults to all the setup options",                # item 9
-    None,                                                                 # item 10: Windows Boot Manager (P1: ...)
-    None,                                                                 # item 11: Ubuntu (P1: ...)
-]
-TARGET_DOWNS = {"windows": 9, "ubuntu": 10}
-
 CSI = re.compile(rb"\x1b\[[0-9;?]*[ -/]*[@-~]")
-OSC = re.compile(rb"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
+OSC = re.compile(rb"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\\\)")
 CTL = re.compile(rb"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -88,23 +115,230 @@ def clean(b):
     return s
 
 
-# ITEM_NAMES[i] = (row substring, negative substring) of the menu row that
-# must be SGR-bold (the cursor row) after DOWN press i+1. The bold row is
-# the cursor-position ground truth (verified against real Aptio frames,
-# 2026-10-29: bold appears only on the highlighted item name); the
-# description panel text is a secondary check.
-ITEM_NAMES = [
-    ("Discard Changes and Exit", None),                 # item 2
-    ("Save Changes and Reset", None),                   # item 3
-    ("Discard Changes and Reset", None),                # item 4
-    ("Save Changes", "Save Changes and"),               # item 5 (not item 1/3)
-    ("Discard Changes", "Discard Changes and"),         # item 6 (not item 2/4)
-    ("Restore Defaults", None),                         # item 7
-    ("Save as User Defaults", None),                    # item 8
-    ("Restore User Defaults", None),                    # item 9
-    ("Windows Boot Manager (P1:", None),                # item 10
-    ("Ubuntu (P1:", None),                              # item 11
-]
+# ---------------- site profiles (schema v1, DESIGN-site-profiles.md) ----
+
+def squash(s):
+    """The profile comparison rule: strip ALL whitespace + lowercase."""
+    return re.sub(r"\s+", "", (s or "")).lower()
+
+
+RE_MAC = re.compile(r"^([0-9a-f]{2}:){5}[0-9a-f]{2}$")
+RE_IP = re.compile(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$")
+RE_ITEM = re.compile(r"^item_(\d+)$")
+PROFILE_KEYS = {"site", "bmc_ip", "dut_mac", "firmware", "discovered_at",
+                "item_count", "power_entry", "target_windows_down",
+                "target_linux_down", "target_linux_name"}
+POWER_ENTRIES = ("cold_on", "warm_reset")
+
+
+def _valid_ip(s):
+    m = RE_IP.match(s)
+    return bool(m) and all(int(g) <= 255 for g in m.groups())
+
+
+def load_profile(path):
+    """Parse a site profile (schema v1). Returns (dict, None) or
+    (None, reason). Strict: unknown keys, duplicate/missing item_N, bad
+    name::desc format, out-of-range targets, bad IP/MAC all fail loudly --
+    a silently misparsed profile would pick the wrong OS.
+    dict: site, bmc_ip, dut_mac (lower), firmware, discovered_at,
+    item_count, items = [(name, desc)] (index 0 = item_1 = the item
+    highlighted at setup arrival, before any DOWN), target_windows_down,
+    target_linux_down, target_linux_name, path.
+    desc "-" = no description column (Boot Override rows) = desc check off.
+    """
+    try:
+        with open(path, "r") as f:
+            lines = f.readlines()
+    except OSError as e:
+        return None, "cannot read %s: %s" % (path, e)
+    kv = {}
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            return None, "bad line (no '='): %r" % line
+        k, v = line.split("=", 1)
+        k, v = k.strip(), v.strip()
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", k):
+            return None, "bad key: %r" % k
+        if k in kv:
+            return None, "duplicate key: %s" % k
+        if k not in PROFILE_KEYS and not RE_ITEM.match(k):
+            return None, "unknown key: %r" % k
+        kv[k] = v
+    for req in ("site", "bmc_ip", "dut_mac", "item_count",
+                "target_windows_down", "target_linux_down",
+                "target_linux_name"):
+        if kv.get(req, "") == "":
+            return None, "missing required key: %s" % req
+    try:
+        item_count = int(kv["item_count"])
+        tw = int(kv["target_windows_down"])
+        tl = int(kv["target_linux_down"])
+    except ValueError:
+        return None, "item_count / target_*_down must be integers"
+    if item_count < 2:
+        return None, "item_count too small: %d" % item_count
+    if not 1 <= tw <= item_count - 1:
+        return None, "target_windows_down=%d out of range 1..%d" % (tw, item_count - 1)
+    if not 1 <= tl <= item_count - 1:
+        return None, "target_linux_down=%d out of range 1..%d" % (tl, item_count - 1)
+    if not _valid_ip(kv["bmc_ip"]):
+        return None, "bmc_ip not a valid IPv4 address: %r" % kv["bmc_ip"]
+    mac = kv["dut_mac"].lower()
+    if not RE_MAC.match(mac):
+        return None, "dut_mac not a valid MAC address: %r" % kv["dut_mac"]
+    # power_entry: how this site's UEFI is entered (schema v1.1).
+    # cold_on = clean shutdown -> bootdev latched while off -> COLD power on
+    # (TUCANA reference platform). warm_reset = bootdev while running ->
+    # WARM power reset: on some platforms (the aic_1x DUT, Tuca_0.09.0) a
+    # COLD boot IGNORES the one-shot latch (verified 2026-11-06).
+    pe = kv.get("power_entry", "cold_on")
+    if pe not in POWER_ENTRIES:
+        return None, "power_entry must be one of %s (got %r)" % (list(POWER_ENTRIES), pe)
+    items = {}
+    for k, v in kv.items():
+        m = RE_ITEM.match(k)
+        if not m:
+            continue
+        n = int(m.group(1))
+        if not 1 <= n <= item_count:
+            return None, "%s index out of range (item_count=%d)" % (k, item_count)
+        if "::" not in v:
+            return None, "%s missing '::' separator (want name::desc)" % k
+        name, desc = v.split("::", 1)
+        name, desc = name.strip(), desc.strip()
+        if not name:
+            return None, "%s has an empty name" % k
+        if not desc:
+            desc = "-"
+        items[n] = (name, desc)
+    missing = [n for n in range(1, item_count + 1) if n not in items]
+    if missing:
+        return None, "missing item_%d" % missing[0]
+    lst = [items[n] for n in range(1, item_count + 1)]
+    sq_seen = {}
+    for n, (nm, _) in enumerate(lst, 1):
+        s = squash(nm)
+        if s in sq_seen:
+            return None, ("items %d and %d have the same squashed name %r "
+                          "-- the highlight check could not tell them apart"
+                          % (sq_seen[s], n, nm))
+        sq_seen[s] = n
+    return {
+        "site": kv["site"], "bmc_ip": kv["bmc_ip"], "dut_mac": mac,
+        "firmware": kv.get("firmware", "unknown"),
+        "discovered_at": kv.get("discovered_at", "unknown"),
+        "item_count": item_count, "items": lst,
+        "power_entry": pe,
+        "target_windows_down": tw, "target_linux_down": tl,
+        "target_linux_name": kv["target_linux_name"], "path": path,
+    }, None
+
+
+def resolve_profile(site, base_dir):
+    """Resolution order: base_dir/profiles/<site>.conf (runner local,
+    latest calibration) > base_dir/sites/<site>.conf (repo baseline).
+    Returns (path, "profiles"|"sites") or (None, None). Site names that
+    are not plain filenames are rejected (no path traversal)."""
+    if (not site or "/" in site or "\\" in site or ".." in site
+            or site != os.path.basename(site)):
+        return None, None
+    for sub in ("profiles", "sites"):
+        p = os.path.join(base_dir, sub, site + ".conf")
+        if os.path.isfile(p):
+            return p, sub
+    return None, None
+
+
+def do_gate(profile_file, bmc_ip, dut_mac, site_name=""):
+    """The identity gate (design 5.1/5.3): profile exists + parses, and
+    its bmc_ip/dut_mac/site match the env. Returns the exit code."""
+    p, err = load_profile(profile_file)
+    if err:
+        print("GATE FAIL (2): %s: %s" % (profile_file, err))
+        return 2
+    bad = []
+    if bmc_ip and p["bmc_ip"] != bmc_ip:
+        bad.append("bmc_ip profile=%s env=%s" % (p["bmc_ip"], bmc_ip))
+    if dut_mac and p["dut_mac"] != dut_mac.lower():
+        bad.append("dut_mac profile=%s env=%s" % (p["dut_mac"], dut_mac))
+    if site_name and p["site"] != site_name:
+        bad.append("site profile=%s env=%s" % (p["site"], site_name))
+    if bad:
+        print("GATE FAIL (3): identity mismatch (site moved or the env is "
+              "wrong): " + "; ".join(bad))
+        return 3
+    print("GATE OK: site=%s bmc_ip=%s dut_mac=%s (%d items, "
+          "windows=DOWN%d linux=DOWN%d/%s)"
+          % (p["site"], p["bmc_ip"], p["dut_mac"], p["item_count"],
+             p["target_windows_down"], p["target_linux_down"],
+             p["target_linux_name"]))
+    return 0
+
+
+def hl_checks(name, all_names):
+    """Highlight check for a profile item name: (squashed name, negs).
+    The SGR-bold run (the cursor row) must contain the name; negs are the
+    squashed full names of every OTHER item that strictly contains this
+    one (disambiguates 'Save Changes' from 'Save Changes and Exit/Reset'
+    without any hardcoded table)."""
+    sq = squash(name)
+    negs = sorted({squash(o) for o in all_names
+                   if o and squash(o) != sq and sq in squash(o)})
+    return sq, negs
+
+
+def step_checks(idx, items):
+    """Nav-verify checks for the item highlighted after DOWN press idx+1
+    (idx 0-based = item idx+1). Name check (hl2) always; desc check
+    (panel2) when the profile carries a real desc fragment ('-' = Boot
+    Override row, no description column)."""
+    name, desc = items[idx]
+    all_names = [nm for nm, _ in items]
+    sq, negs = hl_checks(name, all_names)
+    checks = [("item %d" % (idx + 1), "hl2", (sq, negs))]
+    if desc and desc != "-":
+        checks.append(("desc item %d" % (idx + 1), "panel2", squash(desc)))
+    return checks
+
+
+def now_iso():
+    """Local time as ISO-8601 with an explicit offset (+08:00 style)."""
+    off = -time.timezone if not time.daylight else -time.altzone
+    sign = "+" if off >= 0 else "-"
+    off = abs(off)
+    return (time.strftime("%Y-%m-%dT%H:%M", time.localtime())
+            + "%s%02d:%02d" % (sign, off // 3600, (off % 3600) // 60))
+
+
+def write_profile_atomic(path, text):
+    """S6: tmp + rename = atomic profile write (no half profile)."""
+    d = os.path.dirname(path)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(text)
+    os.replace(tmp, path)
+    try:
+        os.chmod(path, 0o644)
+    except OSError:
+        pass
+
+
+def sniff_firmware(stream):
+    """Best-effort firmware token from the SOL stream (informational only,
+    NEVER a gate)."""
+    m = re.search(rb"Tuca[_ -]?([0-9]+(?:\.[0-9]+)+[0-9A-Za-z._-]*)", stream)
+    if m:
+        return "Tuca_" + m.group(1).decode("latin-1")
+    m = re.search(rb"(?i)BIOS\s*Version[:\s]+([0-9][0-9A-Za-z._-]{2,30})", stream)
+    if m:
+        return m.group(1).decode("latin-1")
+    return "unknown"
 
 
 class Screen(object):
@@ -189,7 +423,7 @@ class Screen(object):
                     continue
                 if data[i:i + 2] == b"\x1b]":
                     j = data.find(b"\x07", i)
-                    j2 = data.find(b"\x1b\\", i)
+                    j2 = data.find(b"\x1b\\\\", i)
                     js = [x for x in (j, j2) if x != -1]
                     i = (min(js) + 1) if js else i + 2
                     continue
@@ -224,17 +458,36 @@ class Screen(object):
         return "\n".join(l.rstrip() for l in self.lines())
 
     def panel_text(self):
-        """Right-hand description panel (grid columns 55..88, 1-based) of
-        every row, joined. The BIOS writes the highlighted item's
-        description here, wrapped (verified position: CUP 6;55 in real
-        reference captures). Joining the panel column alone makes a wrapped
-        sentence contiguous again -- the full screen text is useless for
-        that because menu-column text interleaves between the fragments.
+        """Right-hand description panel (grid columns 55..88, 1-based),
+        DESCRIPTION BOX ONLY: the non-frame segments between the first and
+        second frame lines of the column slice, joined. The BIOS writes the
+        highlighted item's description here, wrapped (verified position:
+        CUP 6;55 in real reference captures); joining the panel column
+        makes a wrapped sentence contiguous again -- the full screen text
+        is useless for that because menu-column text interleaves between
+        the fragments.
+
+        Why box-only: Aptio's setup screen draws fixed furniture in this
+        column range -- the outer-box top border, the description box, its
+        bottom border, the function-key legend ('><: Select Screen ... F4:
+        Save & Exit'), the outer-box bottom border, and the 'Version ...
+        AMI' footer. Joining the whole column (the old behaviour) mixed
+        ALL of it into the desc: frame dashes, the legend, '2025 AMI AB'
+        footer junk (verified 2026-11-08: the first real --discover wrote
+        polluted descs into profiles/aic_1x.conf, and a polluted Boot
+        Override desc would fail the cycle's per-step panel2 check).
         """
+        FRAME = set("-\\|/ +")
         parts = []
+        started = False
         for line in self.lines():
             seg = line[54:88].replace("|", " ").strip()
-            if seg:
+            if seg and set(seg) <= FRAME:
+                if not started:
+                    started = True  # outer-box top border
+                else:
+                    break  # description-box bottom border
+            elif started:
                 parts.append(seg)
         return " ".join(parts)
 
@@ -414,6 +667,10 @@ class Sol:
         self.ipmi("sol", "deactivate")
 
     def open(self):
+        # pty/tty are POSIX-only; imported here (not at module level) so
+        # the profile functions stay importable on any host (local tests).
+        import pty
+        import tty
         m, s = pty.openpty()
         tty.setraw(s)
         cmd = ["ipmitool", "-I", "lanplus", "-H", self.bmc_ip,
@@ -525,6 +782,25 @@ def _check_highlight(screen, name, neg):
     return neg is None or neg not in run
 
 
+def _check_highlight2(screen, sq_name, sq_negs):
+    """Profile highlight check (squash rule): the bold run must contain the
+    squashed item name and none of the squashed superset names (see
+    hl_checks())."""
+    rr = screen.highlight_row()
+    if rr is None:
+        return False
+    run = squash(_bold_run_text(screen, rr))
+    if sq_name not in run:
+        return False
+    return all(n not in run for n in sq_negs)
+
+
+def _check_panel2(screen, sq_desc):
+    """Profile desc check (squash rule): the description panel must contain
+    the squashed desc fragment."""
+    return sq_desc in squash(screen.panel_text())
+
+
 def send_key(sol, trace, key, name, settle, checks, abort_flag):
     """Send one key, read the settle window, log the diff, verify.
 
@@ -533,6 +809,10 @@ def send_key(sol, trace, key, name, settle, checks, abort_flag):
                     (whitespace-tolerant, handles wrapped desc sentences).
       kind 'hl'   : payload = (name, neg); the highlighted (SGR-bold) row
                     must contain name (and not neg).
+      kind 'hl2'  : payload = (sq_name, sq_negs); profile highlight check
+                    (squash substring; negs = derived superset names).
+      kind 'panel': payload = substring matched on the description panel.
+      kind 'panel2': payload = squashed desc fragment (profile rule).
     The rendered screen is the ground truth: BIOS partial redraws
     interleave old and new text in the raw stream, so stream-substring
     verify is unreliable (real-machine failure observed 2026-10-29).
@@ -556,6 +836,10 @@ def send_key(sol, trace, key, name, settle, checks, abort_flag):
                 passed = _check_panel(sol.screen, payload)
             elif kind == "hl":
                 passed = _check_highlight(sol.screen, payload[0], payload[1])
+            elif kind == "hl2":
+                passed = _check_highlight2(sol.screen, payload[0], payload[1])
+            elif kind == "panel2":
+                passed = _check_panel2(sol.screen, payload)
             else:
                 passed = False
             if passed:
@@ -604,7 +888,7 @@ def do_enter(sol, trace):
     return "unknown"
 
 
-def nav_fail(sol, trace, why, boot_to, dut_ip):
+def nav_fail(sol, trace, why, boot_to, dut_ip, code=2):
     """Nav verify failed: do NOT send ENTER. Safe exit = close SOL + plain
     power reset (persistent order unchanged) + wait for normal boot."""
     log("NAV FAIL: %s" % why)
@@ -613,7 +897,7 @@ def nav_fail(sol, trace, why, boot_to, dut_ip):
     rc, _ = sol.ipmi("chassis", "power", "reset")
     if rc != 0:
         log("NAV FAIL: safe-exit power reset FAILED -- check machine manually")
-        return 2
+        return code
     up_at = wait_ping_up(dut_ip, boot_to,
                          dut_mac=os.environ.get("DUT_MAC", ""),
                          dut_net=os.environ.get("DUT_NET", ""))
@@ -625,15 +909,529 @@ def nav_fail(sol, trace, why, boot_to, dut_ip):
         log("NAV FAIL: DUT ping NOT UP after reset within %.0fs "
             "-- check machine manually" % boot_to)
         trace.append("SAFE_EXIT ping NOT UP (check machine manually)")
+    return code
+
+
+def go_to_save_exit_tab(sol, trace, abort_flag, settle_r):
+    """S3: RIGHT until the 'Save Options' section header appears (cap 12
+    presses). Replaces the old hardcoded 7-press count; the marker is tab
+    CONTENT, not the 'Save & Exit' tab label: EVERY tab renders the
+    'F4: Save & Exit' function-key legend in the screen footer, so the
+    label text false-matches on the wrong tab (verified 2026-11-07 on
+    aic_1x: arrival declared after 1 RIGHT on the Advanced tab, then
+    enumeration of the wrong tab). 'Save Options' is the Save & Exit tab's
+    section header -- the marker of the verified 20/20 path (2026-10/11).
+    """
+    for i in range(12):
+        ok = send_key(sol, trace, RIGHT, "RIGHT", settle_r,
+                      [("Save Options (tab arrival)", "text", "Save Options")],
+                      abort_flag)
+        if ok:
+            log("tab 'Save & Exit' reached after %d RIGHT press(es)" % (i + 1))
+            return True
+    return False
+
+
+def capture_item(sol):
+    """Read the currently highlighted item: (name, desc). name = the
+    SGR-bold run (the cursor row); desc = the joined description panel
+    ('-' when the panel is empty = Boot Override rows have no desc).
+    Returns (None, None) when no qualified bold row is on screen."""
+    rr = sol.screen.highlight_row()
+    if rr is None:
+        return None, None
+    name = _bold_run_text(sol.screen, rr)
+    if not name:
+        return None, None
+    desc = " ".join(sol.screen.panel_text().split())
+    return name, (desc if desc else "-")
+
+
+def enumerate_items(sol, trace, abort_flag, settle_d):
+    """S4: enumerate the Save & Exit tab by stepping DOWN. items[0] =
+    item_1 (the first tab item, highlighted at arrival). Stop at wrap back
+    to the first item, or the 24-item safety cap. Returns
+    (items, wrapped) -- items None when the screen could not be read or a
+    key stuck (abort the discovery rather than record a wrong table)."""
+    sol.read(1.0)  # let the tab frame settle before the first capture
+    name, desc = capture_item(sol)
+    if not name:
+        log("enumerate: no qualified bold row on screen (SOL decode?)")
+        return None, False
+    items = [(name, desc)]
+    first_sq = squash(name)
+    wrapped = False
+    for n in range(2, 25):  # 24-item safety cap
+        prev_sq = squash(items[-1][0])
+        send_key(sol, trace, DOWN, "DOWN(enumerate %d)" % n, settle_d,
+                 None, abort_flag)
+        name, desc = capture_item(sol)
+        if not name:
+            log("enumerate: lost the highlighted row at step %d" % n)
+            return None, False
+        sq = squash(name)
+        if sq == first_sq:
+            wrapped = True
+            log("enumerate: wrap detected at DOWN %d -- %d item(s)"
+                % (n - 1, len(items)))
+            break
+        if sq == prev_sq:
+            # no movement: lost key (or a stuck row). Resend up to twice.
+            log("enumerate: no movement at item %d -- resending DOWN" % n)
+            moved = False
+            for _ in range(2):
+                send_key(sol, trace, DOWN, "DOWN(retry enumerate %d)" % n,
+                         settle_d, None, abort_flag)
+                name, desc = capture_item(sol)
+                if not name:
+                    return None, False
+                if squash(name) != prev_sq:
+                    moved = True
+                    break
+            if not moved:
+                log("enumerate: still stuck at item %d after retries "
+                    "-- aborting (partial table untrustworthy)" % n)
+                return None, False
+            sq = squash(name)
+            if sq == first_sq:
+                wrapped = True
+                log("enumerate: wrap detected -- %d item(s)" % len(items))
+                break
+        items.append((name, desc))
+    else:
+        log("enumerate: 24-item cap reached without a wrap -- continuing "
+            "with the partial list (WARN)")
+    return items, wrapped
+
+
+def print_item_table(items, targets, site=None):
+    """S6: the human-readable comparison table (all items, targets marked
+    with their DOWN counts). targets = (win_idx, lin_idx) or None."""
+    win_idx, lin_idx = targets if targets else (None, None)
+    print("==== Save & Exit tab (site=%s, %d items) ===="
+          % (site, len(items)))
+    for i, (nm, desc) in enumerate(items):
+        line = "  item %2d (DOWN %2d): %s" % (i + 1, i, nm)
+        if desc and desc != "-":
+            line += "   [%s]" % (" ".join(desc.split())[:80])
+        if i == win_idx:
+            line += "   <-- WINDOWS target_windows_down=%d" % i
+        if i == lin_idx:
+            line += "   <-- LINUX target_linux_down=%d" % i
+        print(line, flush=True)
+
+
+def build_profile_text(site_name, bmc_ip, dut_mac, firmware, items,
+                       win_idx, lin_idx, linux_name, power_entry="cold_on"):
+    L = ["# Site profile %s -- written by sol_boot.py --discover (%s)"
+         % (site_name, now_iso()),
+         "# No secrets: IP/MAC are test-LAN internals. The cycle opens it",
+         "# read-only; re-run --discover after firmware updates / UEFI reset."]
+    L.append("site=%s" % site_name)
+    L.append("bmc_ip=%s" % bmc_ip)
+    L.append("dut_mac=%s" % dut_mac.lower())
+    L.append("firmware=%s" % firmware)
+    L.append("discovered_at=%s" % now_iso())
+    L.append("power_entry=%s" % power_entry)
+    L.append("item_count=%d" % len(items))
+    for i, (nm, desc) in enumerate(items, 1):
+        L.append("item_%d=%s::%s" % (i, nm, desc if desc and desc != "-" else "-"))
+    L.append("target_windows_down=%d" % win_idx)
+    L.append("target_linux_down=%d" % lin_idx)
+    L.append("target_linux_name=%s" % linux_name)
+    return "\n".join(L) + "\n"
+
+
+def discard_exit_seq(sol, trace, settle_r):
+    """S7: ENTER on 'Discard Changes and Exit' -> Yes/No dialog -> LEFT ->
+    ENTER (the calibrated sequence: the dialog opens with the right
+    option highlighted; LEFT moves to Yes). Returns
+    'ok' | 'no_dialog' | 'no_clear' | 'write_fail'."""
+    try:
+        os.write(sol.master, ENTER)
+    except OSError:
+        return "write_fail"
+    sol.read(4.0)
+    if not (_check_text(sol.screen, "Yes") and _check_text(sol.screen, "No")):
+        trace.append("t=%.1f key=ENTER(Discard) NO Yes/No dialog seen" % sol.t())
+        return "no_dialog"
+    trace.append("t=%.1f key=ENTER(Discard) Yes/No dialog seen -- LEFT then ENTER"
+                 % sol.t())
+    try:
+        os.write(sol.master, LEFT)
+    except OSError:
+        return "write_fail"
+    sol.read(settle_r)
+    n_before = len(sol.stream)
+    try:
+        os.write(sol.master, ENTER)
+    except OSError:
+        return "write_fail"
+    sol.read(6.0)
+    tail = sol.stream[-400:]
+    new_bytes = len(sol.stream) - n_before
+    if b"\x1b[2J" in tail or new_bytes >= 100:
+        trace.append("t=%.1f key=ENTER(Yes) setup exit confirmed "
+                     "(clear=%s new_bytes=%d)"
+                     % (sol.t(), b"\x1b[2J" in tail, new_bytes))
+        log("S7: setup exited via Discard Changes and Exit")
+        return "ok"
+    trace.append("t=%.1f key=ENTER(Yes) no clear and no POST stream "
+                 "(new_bytes=%d)" % (sol.t(), new_bytes))
+    return "no_clear"
+
+
+def discover_safe_exit(sol, trace, items, wrapped, boot_to, dut_ip,
+                       bmc_ip, bmc_user, bmc_pass, settle_d):
+    """S7 safe exit: navigate to 'Discard Changes and Exit' (verified
+    step by step against the just-enumerated table) and discard. Any
+    failure falls back to a plain power reset (the machine boots the
+    persistent order). Returns 'discard' | 'reset' | 'stuck'."""
+    d_idx = None
+    if items:
+        for i, (nm, _) in enumerate(items):
+            if squash(nm) == "discardchangesandexit":
+                d_idx = i
+                break
+    if d_idx is None:
+        log("discover S7: no 'Discard Changes and Exit' item in the "
+            "enumeration -- plain reset")
+    else:
+        last_idx = 0 if wrapped else len(items) - 1
+        dist = (d_idx - last_idx) % len(items)
+        ok_nav = True
+        for k in range(dist):
+            pos = (last_idx + k + 1) % len(items)
+            checks = step_checks(pos, items)
+            if not send_key(sol, trace, DOWN, "DOWN(S7 exit %d/%d)" % (k + 1, dist),
+                            settle_d, checks, abort_flag=None):
+                ok_nav = False
+                log("discover S7: nav verify failed at item %d -- plain reset"
+                    % (pos + 1))
+                break
+        if ok_nav:
+            r = discard_exit_seq(sol, trace, float(os.environ.get("SOL_KEY_SETTLE", "3.0")))
+            if r == "ok":
+                return "discard"
+            log("discover S7: Discard exit did not confirm (%s) -- ESC + plain reset" % r)
+            try:
+                os.write(sol.master, ESC)
+            except OSError:
+                pass
+            sol.read(2.0)
+    sol.close()
+    rc, _ = sol.ipmi("chassis", "power", "reset")
+    if rc != 0:
+        log("!! DISCOVER SAFE EXIT FAILED: machine may be sitting in UEFI "
+            "SETUP -- PHYSICAL INTERVENTION REQUIRED")
+        trace.append("STUCK in setup (safe-exit reset failed)")
+        return "stuck"
+    up_at = wait_ping_up(dut_ip, boot_to,
+                         dut_mac=os.environ.get("DUT_MAC", ""),
+                         dut_net=os.environ.get("DUT_NET", ""))
+    if up_at:
+        log("discover S7: safe exit via plain reset done, DUT ping UP")
+        trace.append("SAFE_EXIT reset done (DUT ping UP)")
+    else:
+        log("discover S7: DUT ping NOT UP after reset within %.0fs "
+            "-- check machine manually" % boot_to)
+        trace.append("SAFE_EXIT reset done (DUT ping NOT UP -- check machine)")
+    return "reset"
+
+
+def discover_fail(sol, trace, why, state, items, boot_to, dut_ip,
+                  bmc_ip, bmc_user, bmc_pass, settle_d, wrapped=False,
+                  profile_written=False):
+    """Any S2-S7 failure: print the diagnosis (with the item table when
+    available), attempt the safe exit, and map to the exit code:
+    7 = machine may be in setup | 2 = profile was written (machine back)
+    | 6 = no profile (machine back)."""
+    log("DISCOVER FAIL: %s" % why)
+    trace.append("DISCOVER_FAIL %s" % why)
+    if items:
+        print_item_table(items, None, site="diagnosis")
+    state["safe_done"] = True
+    res = discover_safe_exit(sol, trace, items, wrapped, boot_to, dut_ip,
+                             bmc_ip, bmc_user, bmc_pass, settle_d)
+    if res == "stuck":
+        state["phase"] = "stuck"
+        return 7
+    state["phase"] = "booting"
+    return 2 if profile_written else 6
+
+
+def discover_flow(sol, trace, bmc_ip, bmc_user, bmc_pass, boot_to, dut_ip,
+                  abort_flag, profile_out, site_name, linux_name, dut_mac,
+                  state, settle_r, settle_d, power_entry="cold_on"):
+    """S2-S7 (S2 = the shared setup entry, already done by the caller).
+    Returns the process exit code."""
+    log("discover: site=%s linux_name=%s dut_mac=%s power_entry=%s -> %s"
+        % (site_name, linux_name, dut_mac, power_entry, profile_out))
+    # S3: Save & Exit tab (text search, cap 12)
+    if not go_to_save_exit_tab(sol, trace, abort_flag, settle_r):
+        return discover_fail(sol, trace,
+                             "S3: 'Save & Exit' tab not reached in 12 RIGHT presses",
+                             state, None, boot_to, dut_ip, bmc_ip, bmc_user,
+                             bmc_pass, settle_d)
+    # S4: enumerate
+    items, wrapped = enumerate_items(sol, trace, abort_flag, settle_d)
+    if not items:
+        return discover_fail(sol, trace,
+                             "S4: enumeration failed (screen unreadable or key stuck)",
+                             state, None, boot_to, dut_ip, bmc_ip, bmc_user,
+                             bmc_pass, settle_d)
+    # S5: pair the targets
+    win_hits = [i for i, (nm, _) in enumerate(items)
+                if squash(nm).startswith("windowsbootmanager")]
+    lin_hits = [i for i, (nm, _) in enumerate(items)
+                if squash(linux_name) in squash(nm)]
+    if not win_hits or not lin_hits:
+        return discover_fail(
+            sol, trace,
+            "S5: target pairing failed (windows_hits=%s linux_hits=%s; "
+            "LINUX_NAME=%r)" % (win_hits, lin_hits, linux_name),
+            state, items, boot_to, dut_ip, bmc_ip, bmc_user, bmc_pass,
+            settle_d, wrapped=wrapped)
+    win_idx, lin_idx = win_hits[0], lin_hits[0]
+    if len(win_hits) > 1 or len(lin_hits) > 1:
+        print_item_table(items, (win_idx, lin_idx), site=site_name)
+        print("WARN: multiple hits -- windows %s / linux %s; the first of "
+              "each will be adopted. ALL of them are listed above."
+              % (win_hits, lin_hits))
+        if sys.stdin.isatty():
+            try:
+                ans = input("adopt the first hit of each and continue? "
+                            "[Enter=yes / q=abort] ")
+            except EOFError:
+                ans = ""
+            if ans.strip().lower() in ("q", "quit", "abort"):
+                return discover_fail(sol, trace,
+                                     "S5: aborted by operator (multiple hits)",
+                                     state, items, boot_to, dut_ip, bmc_ip,
+                                     bmc_user, bmc_pass, settle_d,
+                                     wrapped=wrapped)
+        else:
+            log("discover: WARN non-interactive run -- adopting the first "
+                "hit of each without confirmation")
+    # S6: write the profile (atomic) + the human-readable table
+    firmware = sniff_firmware(sol.stream)
+    text = build_profile_text(site_name, bmc_ip, dut_mac, firmware, items,
+                              win_idx, lin_idx, linux_name, power_entry)
+    try:
+        write_profile_atomic(profile_out, text)
+    except OSError as e:
+        return discover_fail(sol, trace,
+                             "S6: profile write failed: %s" % e, state, items,
+                             boot_to, dut_ip, bmc_ip, bmc_user, bmc_pass,
+                             settle_d, wrapped=wrapped)
+    print_item_table(items, (win_idx, lin_idx), site=site_name)
+    log("S6: profile written: %s" % profile_out)
+    trace.append("PROFILE_WRITTEN %s" % profile_out)
+    # S7: leave setup via Discard (any failure -> safe-exit fallback)
+    res = discover_safe_exit(sol, trace, items, wrapped, boot_to, dut_ip,
+                             bmc_ip, bmc_user, bmc_pass, settle_d)
+    if res == "discard":
+        state["phase"] = "booting"
+        return 0
+    state["safe_done"] = True
+    if res == "stuck":
+        log("!! machine may be sitting in UEFI SETUP -- PHYSICAL INTERVENTION "
+            "REQUIRED (profile WAS written: %s)" % profile_out)
+        state["phase"] = "stuck"
+        return 7
+    state["phase"] = "booting"
+    log("discover S7: plain-reset fallback done (profile WAS written: %s)"
+        % profile_out)
     return 2
 
 
+def setup_exit_flow(sol, trace, boot_to, dut_ip, bmc_ip, bmc_user, bmc_pass,
+                    settle_r, settle_d, state):
+    """RECOVERY: the machine is ON and in UEFI setup (a one-shot latch was
+    active at power on). Leave it via 'Discard Changes and Exit' — item_2
+    on every calibrated site — NO enumeration (that is --discover's job):
+    one verified DOWN, then the calibrated discard sequence. Any failure
+    -> plain power reset (persistent order unchanged). Exit code:
+    0 = discard done | 2 = plain-reset fallback done | 7 = STUCK."""
+    if not go_to_save_exit_tab(sol, trace, None, settle_r):
+        trace.append("SETUP_EXIT tab arrival failed")
+        log("setup-exit: 'Save & Exit' tab not reached in 12 RIGHT presses")
+    else:
+        # name-only check (desc '-'): a layout-tolerant recovery helper;
+        # the SGR-bold row must read 'Discard Changes and Exit'.
+        mini = [("Save Changes and Exit", "-"),
+                ("Discard Changes and Exit", "-")]
+        checks = step_checks(1, mini)
+        if not send_key(sol, trace, DOWN, "DOWN(setup-exit to item_2)",
+                        settle_d, checks, None):
+            log("setup-exit: item_2 verify failed")
+        else:
+            r = discard_exit_seq(sol, trace,
+                                 float(os.environ.get("SOL_KEY_SETTLE", "3.0")))
+            if r == "ok":
+                state["phase"] = "booting"
+                log("setup-exit: Discard Changes and Exit done -- machine "
+                    "booting the persistent order")
+                trace.append("SETUP_EXIT discard done")
+                return 0
+            log("setup-exit: Discard exit did not confirm (%s) -- ESC + plain reset" % r)
+            try:
+                os.write(sol.master, ESC)
+            except OSError:
+                pass
+            sol.read(2.0)
+    # fallback: plain power reset (never leaves the machine in setup)
+    sol.close()
+    rc, _ = sol.ipmi("chassis", "power", "reset")
+    if rc != 0:
+        log("!! SETUP-EXIT FAILED AND RESET FAILED: machine may be sitting "
+            "in UEFI SETUP -- PHYSICAL INTERVENTION REQUIRED")
+        trace.append("STUCK in setup (setup-exit reset failed)")
+        state["phase"] = "stuck"
+        return 7
+    state["phase"] = "booting"
+    state["safe_done"] = True
+    up_at = wait_ping_up(dut_ip, boot_to,
+                         dut_mac=os.environ.get("DUT_MAC", ""),
+                         dut_net=os.environ.get("DUT_NET", ""))
+    if up_at:
+        log("setup-exit: plain-reset fallback done, DUT ping UP")
+        trace.append("SETUP_EXIT reset done (DUT ping UP)")
+    else:
+        log("setup-exit: DUT ping NOT UP after reset within %.0fs "
+            "-- check machine manually" % boot_to)
+        trace.append("SETUP_EXIT reset done (DUT ping NOT UP -- check machine)")
+    return 2
+
+
+def cycle_flow(sol, trace, profile, target, boot_to, dut_ip, abort_flag,
+               state, settle_r, settle_d):
+    """Run phase: profile-driven navigation. Returns the process exit code
+    (0 = handoff confirmed, the caller does the boot capture)."""
+    items = profile["items"]
+    if target == "windows":
+        target_downs = profile["target_windows_down"]
+    else:
+        target_downs = profile["target_linux_down"]
+    log("cycle: target=%s -> %d DOWN press(es) (profile %s, read-only)"
+        % (target, target_downs, os.path.basename(profile["path"])))
+    if not go_to_save_exit_tab(sol, trace, abort_flag, settle_r):
+        return nav_fail(sol, trace,
+                        "tab arrival: 'Save & Exit' not reached in 12 RIGHT presses",
+                        boot_to, dut_ip, code=2)
+    for p in range(target_downs):
+        idx = p + 1  # after DOWN press p+1, item idx+1 is highlighted
+        checks = step_checks(idx, items)
+        if not send_key(sol, trace, DOWN, "DOWN", settle_d, checks, abort_flag):
+            if p == 0:
+                # the layout gate (design 5.3): first item live-verified
+                return nav_fail(
+                    sol, trace,
+                    "LAYOUT DRIFT: item_2 mismatch (profile says %r) -- "
+                    "re-run: ./os_flip.sh --discover" % (items[idx][0],),
+                    boot_to, dut_ip, code=6)
+            return nav_fail(
+                sol, trace,
+                "DOWN press %d/%d verify failed (expecting item %d: %r)"
+                % (p + 1, target_downs, idx + 1, items[idx][0]),
+                boot_to, dut_ip, code=2)
+    r = do_enter(sol, trace)
+    if r == "handoff":
+        state["phase"] = "booting"
+        return 0
+    return nav_fail(sol, trace,
+                    "ENTER response was %r, not the 24B handoff clear" % r,
+                    boot_to, dut_ip, code=2)
+
+
 def main():
-    if len(sys.argv) != 13:
+    argv = sys.argv[1:]
+    if not argv:
         print(__doc__)
         sys.exit(2)
-    (bmc_ip, bmc_user, bmc_pass, target, raw_f, clean_f, trace_f,
-     setup_to, boot_to, dut_ip, abort_flag, power_action) = sys.argv[1:13]
+    mode = argv[0]
+
+    if mode == "resolve":
+        if len(argv) != 3:
+            print(__doc__)
+            sys.exit(2)
+        site, base_dir = argv[1], argv[2]
+        p, src = resolve_profile(site, base_dir)
+        if p is None:
+            print("no profile for site %r (looked in %s/profiles and %s/sites)"
+                  % (site, base_dir, base_dir), file=sys.stderr)
+            avail = []
+            for sub in ("profiles", "sites"):
+                d = os.path.join(base_dir, sub)
+                if os.path.isdir(d):
+                    avail += [f[:-5] for f in os.listdir(d) if f.endswith(".conf")]
+            if avail:
+                print("available: %s" % ", ".join(sorted(set(avail))),
+                      file=sys.stderr)
+            sys.exit(2)
+        print(p)
+        sys.exit(0)
+
+    if mode == "gate":
+        if len(argv) not in (4, 5):
+            print(__doc__)
+            sys.exit(2)
+        site = argv[4] if len(argv) == 5 else ""
+        sys.exit(do_gate(argv[1], argv[2], argv[3], site))
+
+    if mode == "cycle":
+        if len(argv) != 14:
+            print(__doc__)
+            sys.exit(2)
+        (bmc_ip, bmc_user, bmc_pass, target, raw_f, clean_f, trace_f,
+         setup_to, boot_to, dut_ip, abort_flag, power_action,
+         profile_path) = argv[1:14]
+        profile, perr = load_profile(profile_path)
+        if perr:
+            log("FATAL: profile unparseable: %s" % perr)
+            sys.exit(2)
+        if target not in ("windows", "linux"):
+            log("FATAL: bad target %r (want 'windows' or 'linux')" % target)
+            sys.exit(2)
+        if power_action not in ("on", "reset"):
+            log("FATAL: bad power_action %r (want 'on' or 'reset')" % power_action)
+            sys.exit(2)
+        site_name, linux_name, dut_mac = None, None, None
+        discover_out = None
+        power_entry = "cold_on"  # unused in cycle mode (set in discover)
+    elif mode == "discover":
+        if len(argv) != 16:
+            print(__doc__)
+            sys.exit(2)
+        (bmc_ip, bmc_user, bmc_pass, raw_f, clean_f, trace_f,
+         setup_to, boot_to, dut_ip, abort_flag, discover_out, site_name,
+         linux_name, dut_mac, power_entry) = argv[1:16]
+        if (not site_name or "/" in site_name or "\\" in site_name
+                or ".." in site_name):
+            log("FATAL: bad site name %r" % site_name)
+            sys.exit(2)
+        if not linux_name:
+            log("FATAL: LINUX_NAME is empty")
+            sys.exit(2)
+        if power_entry not in POWER_ENTRIES:
+            log("FATAL: bad POWERENTRY %r (want one of %s)"
+                % (power_entry, list(POWER_ENTRIES)))
+            sys.exit(2)
+        profile, target = None, None
+        power_action = "reset" if power_entry == "warm_reset" else "on"
+    elif mode == "setup-exit":
+        if len(argv) != 10:
+            print(__doc__)
+            sys.exit(2)
+        (bmc_ip, bmc_user, bmc_pass, raw_f, clean_f, trace_f,
+         setup_to, boot_to, dut_ip) = argv[1:10]
+        profile, target, power_action = None, None, "setup-exit"
+        abort_flag, discover_out, site_name, linux_name, dut_mac = (None,) * 5
+    else:
+        print("unknown mode %r" % mode, file=sys.stderr)
+        print(__doc__)
+        sys.exit(2)
+
     setup_to = float(setup_to)
     boot_to = float(boot_to)
     deact_wait = float(os.environ.get("SOL_DEACT_WAIT", "10"))
@@ -642,14 +1440,8 @@ def main():
     settle_r = float(os.environ.get("SOL_KEY_SETTLE", "3.0"))
     settle_d = float(os.environ.get("SOL_DOWN_SETTLE", "4.0"))
     up_tail = float(os.environ.get("SOL_UP_TAIL", "15"))
-    dut_mac = os.environ.get("DUT_MAC", "")
+    dut_mac = dut_mac or os.environ.get("DUT_MAC", "")
     dut_net = os.environ.get("DUT_NET", "")
-    if target not in TARGET_DOWNS:
-        log("FATAL: bad target %r (want one of %s)" % (target, sorted(TARGET_DOWNS)))
-        sys.exit(2)
-    if power_action not in ("on", "reset"):
-        log("FATAL: bad power_action %r (want 'on' or 'reset')" % power_action)
-        sys.exit(2)
 
     state = {"phase": "idle", "safe_done": False}
 
@@ -663,12 +1455,56 @@ def main():
     sol = Sol(bmc_ip, bmc_user, bmc_pass)
     trace = []
     code = 0
+    t_reset = time.time()
     try:
         log("phase: deactivate SOL, wait %.0fs" % deact_wait)
         sol.deactivate()
         time.sleep(deact_wait)
         setup_seen = False
-        if power_action == "on":
+        if power_action == "setup-exit":
+            # RECOVERY: the machine is OFF (a one-shot latch may be active).
+            # A live SOL session only sees NEW bytes, so open SOL FIRST and
+            # power on, watching the boot from the start: if the latch held,
+            # 'Aptio Setup' streams in and we safe-exit via Discard Changes
+            # and Exit; if it dropped, the machine boots normally and
+            # nothing is done. An already-on machine is refused (a static
+            # setup screen could not be detected).
+            rc, out = sol.ipmi("chassis", "status")
+            if rc != 0 or not re.search(r"System Power\s*:\s*off", out, re.I):
+                log("FATAL: setup-exit requires System Power: off (got: %s) "
+                    "-- the boot must be watched from the start; check the "
+                    "machine manually" % (" ".join(out.split())[:80]))
+                raise SystemExit(2)
+            sol.open()
+            state["phase"] = "pre"
+            log("setup-exit: SOL session open, wait %.0fs then COLD power on "
+                "(watching for UEFI setup)" % pre_poweron_wait)
+            time.sleep(pre_poweron_wait)
+            t_reset = time.time()
+            rc, _ = sol.ipmi("chassis", "power", "on")
+            if rc != 0:
+                time.sleep(3)
+                rc, _ = sol.ipmi("chassis", "power", "on")
+            if rc != 0:
+                log("FATAL: power on failed")
+                state["phase"] = "idle"
+                raise SystemExit(5)
+            state["phase"] = "post"
+            log("cold power on sent (t=%.1fs)" % sol.t())
+            setup_seen = sol.wait_for(b"Aptio Setup", setup_to, None)
+            if not setup_seen:
+                log("setup-exit: no UEFI setup within %.0fs -- machine "
+                    "presumably booted normally (one-shot latch dropped "
+                    "or absent); NO further action taken" % setup_to)
+                state["phase"] = "booting"
+                raise SystemExit(0)
+            log("setup-exit: UEFI setup reached at t=%.0fs" % sol.t())
+            state["phase"] = "setup"
+            code = setup_exit_flow(sol, trace, boot_to, dut_ip,
+                                   bmc_ip, bmc_user, bmc_pass,
+                                   settle_r, settle_d, state)
+            raise SystemExit(code)
+        elif power_action == "on":
             # CLEAN mode: os_flip.sh already reached System Power: off and
             # latched 'bootdev bios option=efiboot' while off. Open SOL,
             # then COLD power on (no bootdev here -- it was latched off).
@@ -769,50 +1605,24 @@ def main():
                 raise SystemExit(1)
         log("UEFI setup reached at t=%.0fs" % sol.t())
         state["phase"] = "setup"
-        for i in range(7):
-            checks = ([("Save Options (tab arrival)", "text", "Save Options")]
-                      if i == 6 else None)
-            if not send_key(sol, trace, RIGHT, "RIGHT", settle_r, checks,
-                            abort_flag):
-                code = nav_fail(sol, trace,
-                                "RIGHT press %d/7 verify failed" % (i + 1),
-                                boot_to, dut_ip)
-                state["safe_done"] = True
-                raise SystemExit(code)
-        ndown = TARGET_DOWNS[target]
-        for i in range(ndown):
-            checks = []
-            desc = ITEMS[i]
-            if desc is not None:
-                checks.append(("desc item %d" % (i + 2), "panel", desc))
-            name, neg = ITEM_NAMES[i]
-            checks.append(("highlight item %d" % (i + 2), "hl", (name, neg)))
-            if not send_key(sol, trace, DOWN, "DOWN", settle_d, checks,
-                            abort_flag):
-                code = nav_fail(
-                    sol, trace,
-                    "DOWN press %d/%d verify failed (expecting item %d)"
-                    % (i + 1, ndown, i + 2), boot_to, dut_ip)
-                state["safe_done"] = True
-                raise SystemExit(code)
-        r = do_enter(sol, trace)
-        if r == "handoff":
-            state["phase"] = "booting"
+        if mode == "cycle":
+            code = cycle_flow(sol, trace, profile, target, boot_to, dut_ip,
+                              abort_flag, state, settle_r, settle_d)
+            if code == 0:
+                ok, up_at = boot_capture(sol, dut_ip, t_reset, boot_to,
+                                         abort_flag, trace, up_tail,
+                                         dut_mac=dut_mac, dut_net=dut_net)
+                if not ok:
+                    log("FAIL: boot not confirmed (ping not UP within %.0fs) -- "
+                        "SOL evidence saved" % boot_to)
+                    raise SystemExit(3)
+                trace.append("BOOT_UP reset_plus=%.0f" % (up_at - t_reset))
+                log("boot confirmed: ping UP at reset+%.0fs" % (up_at - t_reset))
         else:
-            code = nav_fail(sol, trace,
-                            "ENTER response was %r, not the 24B handoff clear" % r,
-                            boot_to, dut_ip)
-            state["safe_done"] = True
-            raise SystemExit(code)
-        ok, up_at = boot_capture(sol, dut_ip, t_reset, boot_to, abort_flag,
-                                 trace, up_tail,
-                                 dut_mac=dut_mac, dut_net=dut_net)
-        if not ok:
-            log("FAIL: boot not confirmed (ping not UP within %.0fs) -- "
-                "SOL evidence saved" % boot_to)
-            raise SystemExit(3)
-        trace.append("BOOT_UP reset_plus=%.0f" % (up_at - t_reset))
-        log("boot confirmed: ping UP at reset+%.0fs" % (up_at - t_reset))
+            code = discover_flow(sol, trace, bmc_ip, bmc_user, bmc_pass,
+                                 boot_to, dut_ip, abort_flag, discover_out,
+                                 site_name, linux_name, dut_mac, state,
+                                 settle_r, settle_d, power_entry)
     finally:
         sol.close()
         try:
@@ -827,7 +1637,8 @@ def main():
         if state["phase"] in ("setup", "post") and not state["safe_done"]:
             # Machine is sitting in/entering UEFI setup: bring it back to a
             # normal boot. Phase "booting" must NOT be reset (the one-shot
-            # handoff is in progress).
+            # handoff / the discard exit is in progress); phase "stuck"
+            # already failed a reset attempt.
             log("exit path: machine in setup/POST phase -- plain power reset "
                 "to normal boot")
             try:

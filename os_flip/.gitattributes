@@ -2,5 +2,6 @@
 *.py text eol=lf
 *.md text eol=lf
 *.example text eol=lf
+*.conf text eol=lf
 .gitignore text eol=lf
 .gitattributes text eol=lf
