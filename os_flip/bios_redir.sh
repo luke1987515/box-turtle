@@ -38,8 +38,16 @@
 #
 # Creds: BMC_IP / BMC_USER / BMC_PASS from the environment, else from the
 # os_flip.env next to this script (strict KEY=VALUE parse, never sourced).
-# Testable env: BIOS_REDIR_SETTLE (cold-cycle wait, 15), BIOS_REDIR_POLL
-# (verify poll gap, 15), BIOS_REDIR_BUDGET (verify budget, 270), PY3.
+# The graceful-off path also reads DUT_IP / WIN_USER / WIN_PASS / UBU_USER /
+# UBU_PASS (same source) so the cold cycle can clean-shutdown a running OS
+# instead of hard-cutting it (a hard cut of a RUNNING Windows can drop it
+# into WinRE -- the PRE_SHUTDOWN lesson; os_flip.sh shut_down_os semantics).
+# Testable env: BIOS_REDIR_SETTLE (post-off wait, 15), BIOS_REDIR_POLL
+# (verify poll gap, 15), BIOS_REDIR_BUDGET (verify budget, 270),
+# BIOS_REDIR_CLEAN (1 = try graceful off first), BIOS_REDIR_SHUTDOWN_BUDGET
+# (seconds to reach off cleanly, 60), BIOS_REDIR_OS_GRACE (windows->ubuntu
+# attempt gap, 15), BIOS_REDIR_POWER_POLL (off-poll gap, 5),
+# BIOS_REDIR_SSH_CMD (path to ssh_cmd.py, default next to this script), PY3.
 
 set -u
 
@@ -54,7 +62,7 @@ load_env() {
     case $line in ''|\#*) continue;; esac
     k=${line%%=*}; v=${line#*=}
     case $k in
-      BMC_IP|BMC_USER|BMC_PASS)
+      BMC_IP|BMC_USER|BMC_PASS|DUT_IP|WIN_USER|WIN_PASS|UBU_USER|UBU_PASS)
         [ -n "${!k:-}" ] && continue
         export "$k=$v";;
     esac
@@ -68,6 +76,11 @@ BMC_PASS=${BMC_PASS:-}
 SETTLE=${BIOS_REDIR_SETTLE:-15}
 POLL=${BIOS_REDIR_POLL:-15}
 BUDGET=${BIOS_REDIR_BUDGET:-270}
+CLEAN_SHUTDOWN=${BIOS_REDIR_CLEAN:-1}
+SHUTDOWN_BUDGET=${BIOS_REDIR_SHUTDOWN_BUDGET:-60}
+OS_GRACE=${BIOS_REDIR_OS_GRACE:-15}
+POWER_POLL=${BIOS_REDIR_POWER_POLL:-5}
+SSH_CMD=${BIOS_REDIR_SSH_CMD:-$SCRIPT_DIR/ssh_cmd.py}
 
 rf() { # rf <redfish-path> -> JSON on stdout; rc = curl's rc
   curl -sk --max-time 20 -u "$BMC_USER:$BMC_PASS" "https://$BMC_IP/redfish/v1$1"
@@ -140,9 +153,78 @@ except Exception:
   return 1
 }
 
+bmc_power_off_state() {
+  timeout 20 ipmitool -I lanplus -H "$BMC_IP" -U "$BMC_USER" -P "$BMC_PASS" chassis status 2>/dev/null \
+    | grep -Eq "System Power[[:space:]]*:[[:space:]]*off"
+}
+
+# rf_ssh_fire USER PASS CMD: send CMD and tolerate a marker-less session (the
+# shutdown command kills its own session; EOF is the expected ending).
+# rc 0 = auth+send OK (or session ended early) | 1 = spawn error.
+# Mirrors os_flip.sh ssh_fire (rc 0|1|2 all count as "sent, let the poll decide").
+rf_ssh_fire() {
+  local user=$1 pass=$2 cmd=$3 rc
+  "$PY3" "$SSH_CMD" "$user" "$pass" "$DUT_IP" "$cmd" "-" 20 >/dev/null 2>&1
+  rc=$?
+  case $rc in
+    0|1|2) return 0;;
+    *) return 1;;
+  esac
+}
+
+# rf_reach_off: reach "System Power: off" without a hard cut. The booted OS is
+# UNKNOWN here (precheck has not probed yet): windows attempt first, then
+# ubuntu. The power-state poll is the arbiter, not the ssh rc (a failed auth
+# also returns "sent" and the poll simply expires).
+# rc 0 = off reached | 1 = unavailable (no DUT_IP/creds/ssh_cmd) or timed out.
+rf_reach_off() {
+  [ "${CLEAN_SHUTDOWN}" = "1" ] || return 1
+  [ -n "${DUT_IP:-}" ] || return 1
+  [ -f "$SSH_CMD" ] || return 1
+  local t0 deadline sent=0
+  if [ -n "${WIN_USER:-}" ] && [ -n "${WIN_PASS:-}" ]; then
+    echo "graceful off: windows attempt (ssh $WIN_USER: shutdown /s /t 0 /f)"
+    rf_ssh_fire "$WIN_USER" "$WIN_PASS" "shutdown /s /t 0 /f" && sent=1
+  fi
+  t0=$(date +%s); deadline=$((t0 + OS_GRACE))
+  while [ "$(date +%s)" -lt $deadline ] && ! bmc_power_off_state; do sleep 3; done
+  if bmc_power_off_state; then
+    echo "graceful off: System Power off after the windows attempt"
+    return 0
+  fi
+  if [ -n "${UBU_USER:-}" ] && [ -n "${UBU_PASS:-}" ]; then
+    echo "graceful off: ubuntu attempt (ssh $UBU_USER)"
+    # Ubuntu: shutdown needs root. Try passwordless sudo first; otherwise feed
+    # the password through sudo -S (mirrors os_flip.sh shut_down_os).
+    if "$PY3" "$SSH_CMD" "$UBU_USER" "$UBU_PASS" "$DUT_IP" \
+        "sudo -n true && echo SUDONOK77" "SUDONOK77" 10 2>/dev/null | grep -q "SUDONOK77"; then
+      rf_ssh_fire "$UBU_USER" "$UBU_PASS" "sudo shutdown -h now" && sent=1
+    else
+      rf_ssh_fire "$UBU_USER" "$UBU_PASS" "echo '$UBU_PASS' | sudo -S shutdown -h now" && sent=1
+    fi
+  fi
+  [ $sent -eq 1 ] || return 1
+  deadline=$((t0 + SHUTDOWN_BUDGET + 30))
+  while [ "$(date +%s)" -lt $deadline ] && ! bmc_power_off_state; do sleep "$POWER_POLL"; done
+  if bmc_power_off_state; then
+    echo "graceful off: System Power off after the ubuntu attempt"
+    return 0
+  fi
+  echo "graceful off: no clean path reached off in time"
+  return 1
+}
+
 cold_cycle() {
-  echo "cold cycle: chassis power off"
-  timeout 20 ipmitool -I lanplus -H "$BMC_IP" -U "$BMC_USER" -P "$BMC_PASS" chassis power off
+  if bmc_power_off_state; then
+    echo "cold cycle: already off (no shutdown needed)"
+  elif rf_reach_off; then
+    : # off was reached cleanly
+  else
+    echo "cold cycle: forced chassis power off (clean path unavailable or timed out)"
+    timeout 20 ipmitool -I lanplus -H "$BMC_IP" -U "$BMC_USER" -P "$BMC_PASS" chassis power off
+    local w=0
+    while [ $w -lt 30 ] && ! bmc_power_off_state; do sleep 5; w=$((w+5)); done
+  fi
   sleep "$SETTLE"
   echo "cold cycle: chassis power on"
   timeout 20 ipmitool -I lanplus -H "$BMC_IP" -U "$BMC_USER" -P "$BMC_PASS" chassis power on

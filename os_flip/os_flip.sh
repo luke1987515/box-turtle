@@ -693,7 +693,7 @@ bios_redir_gate() {
     log "precheck: console-redirection gate skipped (no bios_redir.sh / no BMC_IP)"
     return 0
   fi
-  bash "$SCRIPT_DIR/bios_redir.sh" state > "$statef" 2>&1
+  DUT_IP="$DUT_IP" bash "$SCRIPT_DIR/bios_redir.sh" state > "$statef" 2>&1
   verdict=$(awk -F': ' '/^VERDICT: / {print $2}' "$statef" | head -1)
   case $verdict in
     ON)
@@ -708,7 +708,7 @@ bios_redir_gate() {
     OFF)
       log "precheck: BIOS console redirection OFF ($(grep -m1 '^ATTRS: ' "$statef" | sed 's/^ATTRS: //')) -- SOL UEFI nav would be blind (2026-11-07 failure mode)"
       log "precheck: auto-repair: nested /Bios/SD PATCH + cold cycle + LIVE re-verify"
-      if ! bash "$SCRIPT_DIR/bios_redir.sh" fix 2>&1 | tee -a "$LOG_FILE"; then
+      if ! DUT_IP="$DUT_IP" bash "$SCRIPT_DIR/bios_redir.sh" fix 2>&1 | tee -a "$LOG_FILE"; then
         log "PRECHECK FAIL: console-redirection repair failed -- aborting (no further power actions)"
         FAIL_COUNT=$((FAIL_COUNT+1))
         return 1
@@ -987,7 +987,7 @@ main() {
   if [ "${BIOS_WAS_OFF:-0}" = "1" ]; then
     if [ "${RESTORE_BIOS_STATE:-0}" = "1" ]; then
       log "==== console-redirection restore (RESTORE_BIOS_STATE=1; found OFF pre-run) ===="
-      if bash "$SCRIPT_DIR/bios_redir.sh" restore "$LOG_DIR/bios_redir_pre.txt" 2>&1 | tee -a "$LOG_FILE"; then
+      if DUT_IP="$DUT_IP" bash "$SCRIPT_DIR/bios_redir.sh" restore "$LOG_DIR/bios_redir_pre.txt" 2>&1 | tee -a "$LOG_FILE"; then
         log "console-redirection restored to the pre-run state (extra cold cycle consumed)"
       else
         log "!! console-redirection restore FAILED -- machine left with redirection ON (repair it before the next run)"

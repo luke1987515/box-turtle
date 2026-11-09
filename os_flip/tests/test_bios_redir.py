@@ -117,14 +117,37 @@ st["host"] = "on"
 json.dump(st, open(p, "w"))
 '
     echo "Chassis Power Control: Up/On";;
+  *"chassis status"*)
+    python3 -c '
+import json, os
+st = json.load(open(os.environ["FAKE_STATE"]))
+print("System Power : %s" % ("on" if st.get("host") == "on" else "off"))
+';;
   *)
     echo "ok";;
 esac
 '''
 
+FAKE_SSH_CMD = r'''#!/usr/bin/env python3
+import json, os, sys
+mode = os.environ.get("FAKE_SSH_MODE", "fail")
+cmd = sys.argv[4] if len(sys.argv) > 4 else ""
+if mode == "fail":
+    sys.exit(3)  # spawn-error path (rf_ssh_fire rc 1)
+if "SUDONOK77" in cmd:
+    sys.exit(0)  # no marker -> passwordless-sudo probe fails
+if "shutdown" in cmd:
+    p = os.environ["FAKE_STATE"]
+    st = json.load(open(p))
+    st["host"] = "off"  # the OS honors the shutdown command
+    json.dump(st, open(p, "w"))
+    print("sent")
+sys.exit(0)
+'''
+
 
 class FakeBMC:
-    def __init__(self, attrs, host="on", mode=""):
+    def __init__(self, attrs, host="on", mode="", ssh=None):
         self.tmp = tempfile.TemporaryDirectory()
         self.statef = os.path.join(self.tmp.name, "state.json")
         self.logf = os.path.join(self.tmp.name, "calls.log")
@@ -138,6 +161,13 @@ class FakeBMC:
             with open(p, "w", newline="\n") as fh:
                 fh.write(body)
             os.chmod(p, os.stat(p).st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+        self.sshf = None
+        if ssh:
+            self.sshf = os.path.join(fake, "ssh_cmd.py")
+            with open(self.sshf, "w", newline="\n") as fh:
+                fh.write(FAKE_SSH_CMD)
+            os.chmod(self.sshf, os.stat(self.sshf).st_mode
+                     | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
         self.env = dict(os.environ)
         self.env.update({
             "PATH": fake + os.pathsep + os.environ["PATH"],
@@ -152,6 +182,19 @@ class FakeBMC:
             "BIOS_REDIR_BUDGET": "30",
             "BIOS_REDIR_ENV": "/nonexistent-env",
         })
+        if ssh:
+            # graceful-off path becomes exercisable: DUT + creds present,
+            # ssh_cmd.py replaced by the fake, minimal grace windows
+            self.env.update({
+                "BIOS_REDIR_SSH_CMD": self.sshf,
+                "FAKE_SSH_MODE": ssh,
+                "DUT_IP": "127.0.0.1",
+                "WIN_USER": "win", "WIN_PASS": "wp",
+                "UBU_USER": "ubu", "UBU_PASS": "up",
+                "BIOS_REDIR_OS_GRACE": "1",
+                "BIOS_REDIR_POWER_POLL": "1",
+                "BIOS_REDIR_SHUTDOWN_BUDGET": "10",
+            })
 
     def run(self, *args, timeout=90):
         r = subprocess.run(["bash", os.path.join(ROOT, "bios_redir.sh")] + list(args),
@@ -276,7 +319,45 @@ def t_fix_rejects_flat_body():
         b.cleanup()
 
 
-# ---------------- 3. restore: the found-state roundtrip ----------------
+# ---------------- 3. graceful off (cold cycle without hard cut) ------------
+
+def t_fix_graceful_off():
+    # the running-OS case: fake ssh honors the windows shutdown command, so
+    # the cold cycle must reach off WITHOUT a chassis power off call.
+    b = FakeBMC(dict(OFF), ssh="ok")
+    try:
+        rc, out, err = b.run("fix")
+        assert rc == 0, (rc, out, err)
+        assert "graceful off: windows attempt" in out, out
+        assert "forced chassis power off" not in out, out
+        log = b.calls()
+        offs = [i for i, l in enumerate(log.splitlines()) if "power off" in l]
+        assert offs == [], "a hard power off happened: %s" % log
+        ons = [i for i, l in enumerate(log.splitlines()) if "power on" in l]
+        assert ons, log
+        assert b.state()["attrs"] == ON and b.state()["host"] == "on", b.state()
+    finally:
+        b.cleanup()
+
+
+def t_fix_graceful_fallback_forced():
+    # ssh spawn-fails (mode fail): every clean attempt dies -> the forced
+    # chassis power off path must still complete the cycle and the fix.
+    b = FakeBMC(dict(OFF), ssh="fail")
+    try:
+        rc, out, err = b.run("fix")
+        assert rc == 0, (rc, out, err)
+        assert "forced chassis power off" in out, out
+        log = b.calls()
+        offs = [i for i, l in enumerate(log.splitlines()) if "power off" in l]
+        ons = [i for i, l in enumerate(log.splitlines()) if "power on" in l]
+        assert offs and ons and offs[0] < ons[0], log
+        assert b.state()["attrs"] == ON and b.state()["host"] == "on", b.state()
+    finally:
+        b.cleanup()
+
+
+# ---------------- 4. restore: the found-state roundtrip --------------------
 
 def t_restore_roundtrip():
     b = FakeBMC(dict(PARTIAL))
@@ -314,7 +395,7 @@ def t_restore_bad_file():
         b.cleanup()
 
 
-# ---------------- 4. os_flip.sh wiring (tokens + syntax) -------------------
+# ---------------- 5. os_flip.sh wiring (tokens + syntax) -------------------
 
 def t_osflip_wiring():
     for f in ("os_flip.sh", "bios_redir.sh"):
@@ -326,6 +407,14 @@ def t_osflip_wiring():
     for token in ("bios_redir_gate", "RESTORE_BIOS_STATE", "BIOS_WAS_OFF",
                   "bios_redir.sh", "console-redirection left ON"):
         assert token in s, "missing %r in os_flip.sh" % token
+    # the gate passes the live (post-DHCP-drift) DUT_IP to the child tool
+    assert 'DUT_IP="$DUT_IP" bash "$SCRIPT_DIR/bios_redir.sh"' in s, \
+        "gate must forward the live DUT_IP to bios_redir.sh"
+    with open(os.path.join(ROOT, "bios_redir.sh")) as fh:
+        bs = fh.read()
+    for token in ("rf_reach_off", "bmc_power_off_state", "rf_ssh_fire",
+                  "BIOS_REDIR_CLEAN", "DUT_IP", "SUDONOK77"):
+        assert token in bs, "missing %r in bios_redir.sh" % token
     # the gate is called inside precheck, and restore is gated on BIOS_WAS_OFF
     assert s.count("bios_redir_gate") >= 2, "gate defined but never called"
     assert "BIOS_REDIR" not in s.replace("RESTORE_BIOS_STATE", ""), \
@@ -347,12 +436,14 @@ def main():
     check("fix: emitted body is NESTED (no flat regression)", t_fix_rejects_flat_body)
     check("restore: found-state roundtrip (OFF -> ON -> back)", t_restore_roundtrip)
     check("restore: bad/missing state file -> rc 1", t_restore_bad_file)
+    check("fix: graceful off (no hard cut when ssh shutdown works)", t_fix_graceful_off)
+    check("fix: graceful fallback (ssh dead -> forced off, still ok)", t_fix_graceful_fallback_forced)
     check("os_flip.sh wiring (tokens + bash -n + env.example)", t_osflip_wiring)
     print()
     if FAILS:
-        print("FAILED: %d/%d -> %s" % (len(FAILS), 11, ", ".join(FAILS)))
+        print("FAILED: %d/%d -> %s" % (len(FAILS), 13, ", ".join(FAILS)))
         return 1
-    print("ALL PASS (11/11)")
+    print("ALL PASS (13/13)")
     return 0
 
 
