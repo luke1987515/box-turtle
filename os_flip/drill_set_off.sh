@@ -6,11 +6,14 @@
 # for the machine back on windows. Leaves: machine ON, redirection OFF.
 #
 # Run from the os_flip dir on 103:  bash drill_set_off.sh
+# Tunable: DRILL_LIVE_BUDGET (LIVE-OFF verify budget, default 300; use 600+
+# on boards whose /Bios readout lags after a cold cycle, e.g. aic_1x).
 # Exit: 0 = LIVE OFF confirmed + DUT back | 1 = any step failed
 set -u
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 cd "$SCRIPT_DIR" || exit 1
 PY3=${PY3:-python3}
+LIVE_BUDGET=${DRILL_LIVE_BUDGET:-300}
 ENV_FILE=$SCRIPT_DIR/os_flip.env
 [ -f "$ENV_FILE" ] || { echo "drill: no $ENV_FILE"; exit 1; }
 
@@ -72,9 +75,9 @@ echo "drill: System Power off"
 # 3) power on -- the cold cycle applies the pending OFF values
 sleep 15
 ipmi chassis power on
-echo "drill: power on sent; waiting for LIVE OFF (budget 300s)"
+echo "drill: power on sent; waiting for LIVE OFF (budget ${LIVE_BUDGET}s)"
 t0=$(date +%s); ok=0
-while [ $(( $(date +%s) - t0 )) -lt 300 ]; do
+while [ $(( $(date +%s) - t0 )) -lt $LIVE_BUDGET ]; do
   if bash bios_redir.sh state 2>/dev/null | grep -q "VERDICT: OFF"; then ok=1; break; fi
   sleep 15
 done
