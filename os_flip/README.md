@@ -21,7 +21,12 @@ Verified before publishing: sandbox **12/12** test cases + real-hardware
 (FAIL_COUNT=0; persistent boot order unchanged; machine left on the last
 booted OS) + a real-board `ac_cycle.sh` graceful cycle PASS (**2026-11-04**,
 relay-cut runner on WiFi; DUT pingable 193s after power on, no DHCP drift;
-the drift-search transport was verified live on the real segment).
+the drift-search transport was verified live on the real segment) + the
+**BIOS console-redirection gate** field-drilled on two real Tuca sites
+(**2026-11-09**, TUCANA and aic_1x): fault reproduced (nested PATCH OFF +
+cold cycle, LIVE confirmed), precheck auto-repair (clean shutdown, zero
+forced cuts), 2/2 cycle PASS on each site, optional restore to the found
+state, both machines returned to the ON baseline.
 
 ## How a cycle works
 
@@ -98,6 +103,9 @@ PRE_SHUTDOWN=0 ./ac_cycle.sh   # legacy hard cut (non-Windows only)
 - Layer-2 reachability to the DUT and BMC (same broadcast domain)
 - BMC web/API defaults or credentials (any vendor with SOL; the key path was
   validated on an AMI Aptio UEFI)
+- BMC with **Redfish** — the console-redirection gate (below) is
+  Redfish-only; a BMC that does not expose the attributes (non-AMI/Tuca
+  board) or Redfish itself is WARN-skipped by the gate, never blocked
 
 ## Quick start
 
@@ -174,6 +182,44 @@ Drift semantics (never a silent wrong-OS pick):
   with `./os_flip.sh --discover` and a `./os_flip.sh 1` shakedown.
 - the profile's `firmware=` field is **informational only**, never a gate.
 
+## Precheck: BIOS console-redirection gate (Redfish)
+
+The SOL-driven UEFI navigation (cycle entry, `--discover`, setup-exit)
+requires the BIOS console redirection ON — TER001 + TER002 + IPMI400 on
+the AMI Tuca board class. With it OFF, SOL streams only the session
+banner, and every setup phase dies at the setup-wait (a real field
+failure: the machine sat in UEFI setup while SOL was blind).
+
+Before **any** power action, the run's precheck reads the three
+attributes from the BMC (`bios_redir.sh state`):
+
+- **ON** — proceed.
+- **OFF** — auto-repair before anything else: nested `/Bios/SD` PATCH
+  (a flat spec-standard body returns 400 on this board class) + cold
+  cycle (a clean SSH shutdown of a running OS is attempted first; a
+  forced `chassis power off` is the fallback) + LIVE re-verify. A failed
+  repair aborts the run (PRECHECK FAIL) — no further power actions.
+- **ABSENT / REDFISH_DOWN** — WARN only. Non-AMI/Tuca boards, and BMCs
+  that answer IPMI but not Redfish, are never blocked by the gate.
+
+After the run the machine is left with redirection **ON** (the usable
+baseline) unless `RESTORE_BIOS_STATE=1` writes the found state back
+(one extra cold cycle).
+
+Board quirk (aic_1x): its `/Bios` attribute readout can lag minutes after
+a cold cycle even though the values applied — run the gate there with
+`BIOS_REDIR_BUDGET=900`; the functional truth on that board is the SOL
+stream, not the readout.
+
+Both tools are also usable standalone:
+
+```bash
+bios_redir.sh state             # report-only: ATTRS + VERDICT (ON|OFF|ABSENT|REDFISH_DOWN)
+bios_redir.sh fix               # enable all three: nested PATCH + cold cycle + LIVE verify
+bios_redir.sh restore <file>    # write a saved `state` output (the ATTRS: line) back
+DRILL_LIVE_BUDGET=600 bash drill_set_off.sh   # reproduce the fault (gate drills)
+```
+
 ## Discovery (first run)
 
 Two identity-discovery modes, automatic in this order:
@@ -219,6 +265,9 @@ cut, no writes) — useful for sanity-checking the environment.
 | `CYCLES` | `10` (or argv 1) | number of switch cycles |
 | `SHUTDOWN_MODE` | `clean` | `clean` = SSH shutdown → off → bootdev-while-off → power on (COLD); `reset` = legacy warm reset |
 | `SHUTDOWN_TIMEOUT` | `60` | budget (s) for the clean shutdown to reach power off |
+| `RESTORE_BIOS_STATE` | `0` | gate: after the run, restore the pre-run console-redirection state the gate found (one extra cold cycle; only relevant when the gate repaired an OFF state) |
+| `BIOS_REDIR_BUDGET` | `270` | gate: LIVE re-verify budget after a repair/restore cold cycle (s); use `900` on boards whose `/Bios` readout lags (aic_1x) |
+| `BIOS_REDIR_CLEAN` | `1` | gate: the repair/restore cold cycle tries a clean SSH shutdown of a running OS before any forced power off |
 | `SETUP_TIMEOUT` / `BOOT_TIMEOUT` | `120` / `240` | UEFI setup / boot-confirmation budgets (s) |
 | `PROBE_TIMEOUT` / `ID_PROBE_BUDGET` | `30` / `240` | single SSH probe / whole identification budget (s) |
 | `COLLECT_TIMEOUT` | `120` | system-info collection budget (s) |
@@ -233,6 +282,8 @@ cut, no writes) — useful for sanity-checking the environment.
   reset to normal boot), cycle FAIL, **abort the whole run**
 - **boot timeout / identification fail / wrong OS** → cycle FAIL, abort
 - **collection failure after a correct boot** → cycle **PARTIAL**, continue
+- **gate repair failure (precheck)** → PRECHECK FAIL, the run aborts
+  before any power action; the machine is left exactly as found
 
 Every cycle writes: nav key trace (`t/key/+bytes/text`), boot duration
 (reset → ping UP), OS identification evidence, the full system-info output,
@@ -264,6 +315,11 @@ cd sandbox
 Expected exit code per case (the pass criterion): A=0, **B=1, C=1**
 (the negative cases abort the run by design), D=0, E=0, F=0, G=0,
 H=0, I=0, J=0, K=0, L=0.
+
+The profile + gate logic additionally has no-hardware test suites in
+`tests/` (`python3 tests/test_bios_redir.py` — 13 checks against a
+PATH-shimmed fake BMC; `python3 tests/test_site_profiles.py` — 13) that
+run anywhere with bash + python3.
 
 ## Safety notes
 

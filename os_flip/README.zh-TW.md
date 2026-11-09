@@ -17,7 +17,11 @@ self-hosted **Qwen3.8-27B** 模型——早期開發 session 可能使用其他�
 圈 PASS（**2026-11-02**；FAIL_COUNT=0；持久開機順序未動；機器停在
 最後開出的 OS）+ 實機 `ac_cycle.sh` graceful 圈 PASS（**2026-11-04**；
 WiFi relay 執行機；DUT 開機後 193s 即 pingable、無 DHCP 漂移；drift-search
-transport 已在真實網段驗證）。
+transport 已在真實網段驗證）＋ **BIOS console-redirection gate** 兩台
+實機演練（**2026-11-09**，TUCANA 與 aic_1x）：重現故障（巢狀 PATCH
+OFF＋cold cycle、LIVE 確認）→ precheck 自動修復（clean shutdown、零
+硬切）→ 各 2/2 圈 PASS → 可選還原回發現時狀態 → 兩台都回到 ON
+baseline。
 
 ## 每圈的動作
 
@@ -82,6 +86,9 @@ PRE_SHUTDOWN=0 ./ac_cycle.sh   # 舊 hard cut（僅非 Windows）
 - `python3` + `pexpect`（SOL/SSH 驅動是 Python）
 - 與 DUT、BMC 同 L2 廣播域
 - 有 SOL 的 BMC（key path 已在 AMI Aptio UEFI 實機驗證）
+- BMC 有 **Redfish**——console-redirection gate（見下）走 Redfish；
+  不暴露這組屬性（非 AMI/Tuca 板）或本身沒有 Redfish 的 BMC 只被
+  WARN 跳過，絕不擋住
 
 ## 快速開始
 
@@ -152,6 +159,40 @@ profile 是進入方式的**唯一來源**；`SHUTDOWN_MODE` 只在 profile 為
   中止；修正 = `./os_flip.sh --discover` + `./os_flip.sh 1` shakedown。
 - profile 的 `firmware=` 欄**僅供資訊**，不作為 gate。
 
+## Precheck：BIOS console-redirection gate（Redfish）
+
+SOL 驅動的 UEFI 導覽（cycle 進入、`--discover`、setup-exit）需要 BIOS
+console redirection 是**開**的——AMI Tuca 板就是 TER001 + TER002 +
+IPMI400 三項。關掉時 SOL 只有 session banner，每個 setup 階段都會死在
+setup-wait（真實現場事故：機器停在 UEFI setup、SOL 全盲）。
+
+**任何** power 動作之前，precheck 會從 BMC 讀這三項（`bios_redir.sh
+state`）：
+
+- **ON** — 繼續。
+- **OFF** — 先自動修復：巢狀 `/Bios/SD` PATCH（flat 標準形狀在這類板
+  會 400）＋ cold cycle（對執行中的 OS 先嘗試 SSH clean shutdown；
+  逾時才 fallback 強制 `chassis power off`）＋ LIVE 再驗證。修復失敗 =
+  PRECHECK FAIL 中止——不再碰電源。
+- **ABSENT / REDFISH_DOWN** — 只 WARN。非 AMI/Tuca 板、或 BMC 只答
+  IPMI 不答 Redfish，gate 絕不擋住。
+
+跑完後機器留 **ON**（可用 baseline），除非 `RESTORE_BIOS_STATE=1`
+把發現時的狀態寫回去（多一次 cold cycle）。
+
+板子特性（aic_1x）：它的 `/Bios` 屬性讀數在 cold cycle 後可能落後
+好幾分鐘（值其實已套用）——該站跑 gate 用 `BIOS_REDIR_BUDGET=900`；
+那台的 ground truth 是 SOL 串流，不是讀數。
+
+兩個工具也可獨立使用：
+
+```bash
+bios_redir.sh state             # 只讀：ATTRS + VERDICT（ON|OFF|ABSENT|REDFISH_DOWN）
+bios_redir.sh fix               # 三項全開：巢狀 PATCH + cold cycle + LIVE 驗證
+bios_redir.sh restore <file>    # 把存的 `state` 輸出（ATTRS: 列）寫回去
+DRILL_LIVE_BUDGET=600 bash drill_set_off.sh   # 重現故障（gate 演練用）
+```
+
 ## 首次執行偵測（discovery）
 
 兩種身份偵測模式，依序自動：
@@ -190,6 +231,9 @@ profile 是進入方式的**唯一來源**；`SHUTDOWN_MODE` 只在 profile 為
 | `CYCLES` | `10`（或 argv 1） | 切換圈數 |
 | `SHUTDOWN_MODE` | `clean` | `clean` = SSH 關機 → 斷電 → 斷電中 latch bootdev → 開機（COLD）；`reset` = legacy warm reset |
 | `SHUTDOWN_TIMEOUT` | `60` | 乾淨關機到 power off 的預算（秒） |
+| `RESTORE_BIOS_STATE` | `0` | gate：跑完後把發現時的 console-redirection 狀態還原（多一次 cold cycle；只在 gate 修復過 OFF 時有意義） |
+| `BIOS_REDIR_BUDGET` | `270` | gate：修復/還原 cold cycle 後的 LIVE 驗證預算（秒）；`/Bios` 讀數延遲的板子（aic_1x）用 `900` |
+| `BIOS_REDIR_CLEAN` | `1` | gate：修復/還原的 cold cycle 對執行中的 OS 先嘗試 SSH clean shutdown，逾時才強制 power off |
 | `SETUP_TIMEOUT` / `BOOT_TIMEOUT` | `120` / `240` | UEFI setup / 開機確認預算（秒） |
 | `PROBE_TIMEOUT` / `ID_PROBE_BUDGET` | `30` / `240` | 單次 SSH probe / 整體鑑定預算（秒） |
 | `COLLECT_TIMEOUT` | `120` | 系統資訊收集預算（秒） |
@@ -204,6 +248,8 @@ profile 是進入方式的**唯一來源**；`SHUTDOWN_MODE` 只在 profile 為
   正常開機），該圈 FAIL，**中止全場**
 - **boot timeout / 鑑定失敗 / 開錯 OS** → 該圈 FAIL，中止
 - **開機正確但收集失敗** → 該圈 **PARTIAL**，繼續
+- **gate 修復失敗（precheck）** → PRECHECK FAIL、任何 power 動作前
+  中止；機器維持發現時的狀態
 
 每圈落檔：nav 按鍵 trace（`t/key/+bytes/text`）、開機耗時（reset → ping
 UP）、OS 鑑定證據、完整系統資訊輸出、失敗原因。全部放在
@@ -232,6 +278,11 @@ cd sandbox
 
 各 case 預期 exit code（過關標準）：A=0、**B=1、C=1**（負例依設計
 中止全場、exit 1）、D=0、E=0、F=0、G=0、H=0、I=0、J=0、K=0、L=0。
+
+profile＋gate 邏輯另有無硬體測試套件在 `tests/`（`python3
+tests/test_bios_redir.py`——對 PATH-shimmed 的 fake BMC 13 項檢查；
+`tests/test_site_profiles.py` 13 項），任何有 bash + python3 的機器
+都能跑。
 
 ## 安全說明
 
