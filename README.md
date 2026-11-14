@@ -43,6 +43,7 @@ Bash、Python、PowerShell）
 | `JBOD_BMC_DC_Cycle_PowerShell_Script` | BMC DC cycle（PowerShell，帶 retry） |
 | `loop_AC_get_sel_elist_win` | AC loop + SEL/elist 擷取（CH340T relay，Windows） |
 | `zv2_temp_ac_cycle_loop_Linux_Bash` | ZV2 溫度保護 AC cycle loop（BMC SEL mark 方案） |
+| `ac_temp_protect_Linux_Bash` | BMC 入口溫度保護：持續高溫切 AC、**不自動回電**（status / power-on / clean；雙語 README） |
 | `OS_rebooter_script` | OS 重啟腳本（含 HDD 數量檢查） |
 | `___rc_count_Script` | AIC_start.sh rc count 腳本 |
 
