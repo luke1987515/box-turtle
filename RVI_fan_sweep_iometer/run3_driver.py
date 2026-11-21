@@ -10,7 +10,7 @@ Run as root. Usage: run3_driver.py ab
 """
 # Provenance: designed & validated by Luke Chen; developed with AI assistance
 # (Hermes Agent by Nous Research, self-hosted Qwen model family).
-import glob, json, os, re, subprocess, sys, time
+import glob, json, os, re, shutil, subprocess, sys, time
 
 BASE = '/root/rvi'
 ICF = BASE + '/icf'
@@ -18,7 +18,7 @@ AB_DIR = BASE + '/ab'
 RES3 = BASE + '/results_run3'
 LOGF = open(BASE + '/run3_progress.log', 'a', buffering=1)
 STATE = BASE + '/run3_state.json'
-WINE = '/usr/local/bin/wine64'
+WINE = shutil.which('wine64') or '/usr/bin/wine64'
 IOMETER_EXE = '/opt/iometer/iometer.exe'
 DYNAMO_BIN = '/opt/iometer/dynamo'
 
@@ -263,7 +263,22 @@ def main():
         raise RuntimeError('iometer/dynamo already running: %s' % out)
     out, rc = sh('pgrep -f "Xvfb :9[9]" || true')
     if not out.strip():
-        raise RuntimeError('Xvfb :99 not found - aborting (IOMeter needs display)')
+        # On-demand Xvfb (no systemd unit by design): a reboot/restart may
+        # have left it down; start it here instead of aborting.
+        log('Xvfb :99 not running - starting it (on demand, no systemd unit)')
+        xvfb_log = open(BASE + '/xvfb_run3.log', 'ab')
+        subprocess.Popen(['Xvfb', XVFB, '-screen', '0', '1024x768x24', '-nolisten', 'tcp'],
+                         stdout=xvfb_log, stderr=subprocess.STDOUT, start_new_session=True)
+        started = False
+        for _i in range(15):
+            time.sleep(1)
+            out, _rc = sh('pgrep -f "Xvfb :9[9]" || true')
+            if out.strip():
+                started = True
+                break
+        if not started:
+            raise RuntimeError('Xvfb :99 failed to start - aborting (IOMeter needs display; see %s/xvfb_run3.log)' % BASE)
+        log('Xvfb :99 up: %s' % out.replace('\n', ','))
     cache_check()
     log('preflight ok (Xvfb up, nothing running, cache verified)')
     base = fan_read()

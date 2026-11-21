@@ -46,6 +46,7 @@ Wine + `iometer.exe` batch mode (`/c <icf> /r <csv> /t <s>`, Xvfb headless).
 | `make_1w.py` | converts the 24-worker ICFs to the customer 1-worker/24-target form (`*_1w.icf`) |
 | `run3_driver.py` | pinned per-run sweep driver (pin+gate, WCE check, A/B gate, auto-restore) |
 | `rvi_compare.py` | cross-stack xlsx report generator (Windows side) |
+| `setup_fresh_dut.sh` | one-shot bootstrap of a fresh Ubuntu Server into a ready RVI DUT |
 | `icf/` | the 4 ICF files (2 test profiles + 2 smoke) + 2 customer 1-worker ICFs (`*_1w.icf`) |
 | `test_*.sh` | sandbox tests (report parser, fan logic) |
 

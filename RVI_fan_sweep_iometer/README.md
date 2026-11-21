@@ -40,6 +40,7 @@ run within +/-1% at every level. FAIL_COUNT=0.
 | `make_1w.py` | converts the 24-worker ICFs to the customer 1-worker/24-target form (`*_1w.icf`) |
 | `run3_driver.py` | pinned per-run sweep driver (CPU pin+gate, WCE check, A/B gate, 13-level fan sweep, CSV self-check, auto-restore) |
 | `rvi_compare.py` | cross-stack xlsx report generator (Windows side; reads per-stack CSV dirs) |
+| `setup_fresh_dut.sh` | one-shot bootstrap of a fresh Ubuntu 24.04 server into a ready RVI DUT |
 
 ## Prerequisites (on the DUT, root)
 
@@ -71,6 +72,24 @@ python3 make_icf.py /root/rvi/icf --template <ref_minimal.icf> --manager-ip 127.
 
 One DISK worker per drive, one target per worker → per-disk rows in the CSV.
 Manager name `rvi-dut` @ 127.0.0.1 must match `dynamo -n rvi-dut`.
+
+## Fresh-DUT bootstrap (new server)
+
+On an untouched Ubuntu 24.04 server (root):
+
+```bash
+git clone --depth 1 https://github.com/luke1987515/box-turtle.git
+bash box-turtle/RVI_fan_sweep_iometer/setup_fresh_dut.sh \
+    [--from-dut user@existing-dut-ip] [--no-preflight]
+```
+
+Installs the apt packages, fetches IOMeter 1.1.0 (official SourceForge
+releases, SHA256-verified — or scp from an existing DUT with `--from-dut`),
+lays out `/root/rvi`, auto-detects the 24 data disks (writes `TEST_DISKS`
+in rvi.conf, regenerates all ICFs to match), probes the BMC fan readback,
+and finishes with `00_preflight.sh` (incl. the 24-disk batch-mode smoke).
+No systemd units are created: Xvfb :99 is started on demand by the pipeline
+scripts (`ensure_xvfb`), by design.
 
 ## Run
 
