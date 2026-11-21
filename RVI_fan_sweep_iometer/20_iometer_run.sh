@@ -132,7 +132,7 @@ stop_dynamo() {
     pkill -x dynamo 2>/dev/null
 }
 
-# --- Fan control (vendor BMC) ---------------------------------------------------
+# --- Fan control (ZELUS BMC) ---------------------------------------------------
 # read_fan_state: print the two fan-level bytes from 0xFB (one per line,
 # uppercase, bare hex — ipmitool raw prints bare hex). 0-based indices in
 # the 34-byte response: FAN_PWM_IDX_1 (system, exact), FAN_PWM_IDX_2 (PSU,

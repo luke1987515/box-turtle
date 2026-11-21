@@ -43,7 +43,10 @@ Wine + `iometer.exe` batch mode (`/c <icf> /r <csv> /t <s>`, Xvfb headless).
 | `20_iometer_run.sh` | shared helpers + IOMeter batch runner (sourced only) |
 | `30_report.py` | post-sweep summary → `report/` (raw CSVs untouched) |
 | `make_icf.py` | generates the 4 ICFs from a GUI-saved reference template |
-| `icf/` | the 4 ICF files (2 test profiles + 2 smoke) |
+| `make_1w.py` | converts the 24-worker ICFs to the customer 1-worker/24-target form (`*_1w.icf`) |
+| `run3_driver.py` | pinned per-run sweep driver (pin+gate, WCE check, A/B gate, auto-restore) |
+| `rvi_compare.py` | cross-stack xlsx report generator (Windows side) |
+| `icf/` | the 4 ICF files (2 test profiles + 2 smoke) + 2 customer 1-worker ICFs (`*_1w.icf`) |
 | `test_*.sh` | sandbox tests (report parser, fan logic) |
 
 ## Provenance (machine-readable)
@@ -51,5 +54,7 @@ Wine + `iometer.exe` batch mode (`/c <icf> /r <csv> /t <s>`, Xvfb headless).
 generated_by: Hermes Agent (Nous Research) — self-hosted Qwen model family
 designed_by: Luke Chen
 verified: 2026-11-17/18 full 13-level sweep on 24-bay JBOD DUT,
-          26/26 CSV, 24/24 DISK rows per run, 0 I/O errors, FAIL_COUNT=0
+          26/26 CSV, 24/24 DISK rows per run, 0 I/O errors, FAIL_COUNT=0;
+          2026-11-21 RUN3 pinned 1-worker sweep 26/26, 0 I/O errors,
+          A/B gate 4K 1.32% / 256K 0.16%, FAIL_COUNT=0
 ```

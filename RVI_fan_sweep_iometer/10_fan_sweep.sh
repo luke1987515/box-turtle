@@ -2,7 +2,7 @@
 # =============================================================================
 # 10_fan_sweep.sh — RVI fan-sweep main loop
 #
-# Per PWM level: set fan (vendor raw cmd) -> verify readback -> settle ->
+# Per PWM level: set fan (ZELUS raw cmd) -> verify readback -> settle ->
 # run 4K Random Writes ICF -> run 256K Sequential Writes ICF.
 # Idempotent: re-running resumes from the first missing level (valid CSVs
 # are skipped), so power loss / aborts can simply re-launch this script.

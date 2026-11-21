@@ -1,6 +1,6 @@
-# RVI Fan-Sweep Automation — 24-bay JBOD storage DUT
+# RVI Fan-Sweep Automation — XE1-2MS00-08 (ZELUS MB)
 
-Automates the customer "Rotation Vibration" (RVI) IOPS-vs-fan-PWM test:
+Automates the Pega "Rotation Vibration" IOPS-vs-fan-PWM test:
 sweep 13 fan PWM levels (20→100%), and at each level run **both** IOMeter
 profiles (4K Random Writes + 256K Sequential Writes) on **all drives
 simultaneously**, saving one CSV per level per test (26 CSVs total).
@@ -8,7 +8,7 @@ simultaneously**, saving one CSV per level per test (26 CSVs total).
 Stack (all on the DUT, per design decision "Option A"):
 Ubuntu 24.04.1 + native IOMeter 1.1.0 **dynamo** agent (raw `/dev/sdX`) +
 **Wine** + `iometer.exe` **batch mode** (`/c …/r …/t …`, no GUI clicks).
-Fan control via local `ipmitool raw 0x36 0xFA/0xFB` (vendor BMC).
+Fan control via local `ipmitool raw 0x36 0xFA/0xFB` (ZELUS BMC).
 
 ## Provenance
 
@@ -21,6 +21,13 @@ Verification record: full 13-level sweep on the 24-bay JBOD DUT
 set/verified 13/13, fan state restored and verified at the end; preflight
 smoke24 rc=0 with 24/24 DISK rows in ~81 s. FAIL_COUNT=0.
 
+Verification record 2 (2026-11-21, RUN3): full 13-level sweep with per-run CPU
+pinning (boost=0 + performance 2650 MHz, 5 s gate) and the customer
+1-worker/24-target ICFs: 26/26 CSVs, internal stopwatch 120.00 s in all 26
+runs, 0 I/O errors; pre-sweep A/B gate (24-worker vs 1-worker): 4K 1.32% /
+256K 0.16% total-IOPS diff; raw IOPS agree with the Pega Windows-native
+run within +/-1% at every level. FAIL_COUNT=0.
+
 ## Files
 
 | File | Role |
@@ -30,6 +37,9 @@ smoke24 rc=0 with 24/24 DISK rows in ~81 s. FAIL_COUNT=0.
 | `10_fan_sweep.sh` | main loop (fan set → verify → settle → 2 ICF runs per level) |
 | `20_iometer_run.sh` | helpers + IOMeter batch runner (sourced, not run directly) |
 | `30_report.py` | post-sweep summary into `report/` (raw CSVs untouched) |
+| `make_1w.py` | converts the 24-worker ICFs to the customer 1-worker/24-target form (`*_1w.icf`) |
+| `run3_driver.py` | pinned per-run sweep driver (CPU pin+gate, WCE check, A/B gate, 13-level fan sweep, CSV self-check, auto-restore) |
+| `rvi_compare.py` | cross-stack xlsx report generator (Windows side; reads per-stack CSV dirs) |
 
 ## Prerequisites (on the DUT, root)
 
@@ -56,7 +66,7 @@ python3 make_icf.py /root/rvi/icf --template <ref_minimal.icf> --manager-ip 127.
 
 - `4K_Random_Writes.icf` — 4 KB, 100% random writes, QD8, 30 s ramp, 2 min
 - `256K_Seq_Writes.icf` — 256 KB, 100% sequential writes, QD8, 30 s ramp, 2 min
-- `smoke.icf` — 10 s, 1 worker (sdb only)
+- `smoke.icf` — 10 s, 1 worker (sda only)
 - `smoke24.icf` — 60 s, all 24 workers (preflight end-to-end check)
 
 One DISK worker per drive, one target per worker → per-disk rows in the CSV.
@@ -75,13 +85,45 @@ After the sweep: `report/` contains `summary_4K_Random.csv`,
 `summary_256K_Seq.csv`, `audit_missing.csv`, `errors_summary.txt`.
 The 26 raw CSVs stay in `results/` untouched.
 
+## RUN3: pinned sweep with the customer 1-worker ICFs
+
+Two fixes over the 20_iometer_run pipeline, both validated 2026-11-21:
+
+1. **CPU pin per run.** IOMeter's internal stopwatch = TSC ticks / the CPU
+   frequency the OS reports at run start; under schedutil the EPYC drifts
+   1.5–3.0 GHz, so a true 120 s run recorded as 159–238 s (IOPS understated).
+   `run3_driver.py` pins every run: boost=0 + performance min=max=2650 MHz,
+   5 s multi-sample gate on all cores (per-core max, +/-1%), then restores
+   schedutil + boost=1. With the pin, the internal stopwatch reads 120.00 s
+   and the raw IOPS are directly correct (no post-hoc correction needed).
+2. **Customer ICF structure.** The Pega Windows-native ICF uses 1 worker over
+   24 targets; IOMeter counts outstanding IOs PER target, so per-disk QD8 is
+   unchanged. `make_1w.py` converts the 24-worker ICFs into `*_1w.icf`
+   (originals untouched). A pre-sweep A/B gate (24-worker vs 1-worker, same
+   level, 120 s each) must agree within 2% total IOPS + per-disk median
+   before the sweep proceeds.
+
+```bash
+cd /root/rvi
+python3 make_1w.py                      # (re)generate icf/*_1w.icf
+nohup python3 run3_driver.py >> logs/run3_nohup.log 2>&1 &
+tail -f run3_progress.log               # A/B gate, then 26 runs, ~85 min
+```
+
+Driver responsibilities per run: WCE check (sdparm; sets WCE=0 if ON — it
+resets ON after any reboot), CPU pin+gate, fresh dynamo agent, 120 s IOMeter
+run, CSV self-check (internal time 120±0.5 s, row count), state restore;
+fan levels from `rvi.conf`; fan baseline readback-captured and restored on
+every exit path; results in `results_run3/`; idempotent resume.
+Cross-stack report (Windows side): `rvi_compare.py OUT.xlsx "Label" CSV_DIR ...`.
+
 ## Operator runbook (HDD-swap scenario)
 
 For the technician running the sweep after the customer-specified HDDs are
 installed (all as root on the DUT):
 
 ```bash
-# 1. Confirm the 24 data disks. If the names are NOT sdb..sdy,
+# 1. Confirm the 24 data disks. If the names are NOT sda..sdx,
 #    update TEST_DISKS in rvi.conf first.
 lsblk
 
@@ -122,15 +164,15 @@ ipmitool raw 0x36 0xFB
   are ignored. The 14-byte form in the requirements doc does not work on
   this firmware. READ = `0x36 0xFB`, 34 bytes; fan levels at 0-based
   indices 2 (exact) and 18 (±1 drift). See rvi.conf for the full note.
-- **Drive set**: 24 JBOD data bays sdb–sdy; /dev/nvme0n1 = OS boot disk and
-  /dev/sda = 0B BMC virtual disk are excluded (`TEST_DISKS` in rvi.conf).
+- **Drive set**: 24 JBOD data bays sda–sdx; /dev/nvme0n1 = OS boot disk and
+  /dev/sdy = 0B BMC virtual disk are excluded (`TEST_DISKS` in rvi.conf). (Layout re-verified 2026-11-21 after the virtual disk moved from sda to sdy.)
 - **Write cache**: hdparm -W does not work behind the mpt3sas HBA; preflight
   uses `sdparm --get/--set WCE` (drives shipped with WCE=1 — now 0).
 - **Batch mode**: preflight smoke (24-disk, 60 s) passes through the
   production code path — rc=0, 24/24 DISK rows, 0 errors, ~81 s.
 - **Wine**: EULA skipped via registry seed; wine64 direct; Xvfb :99 headless.
 
-## Still open (confirm with the platform vendor)
+## Still open (confirm with Zelus/Piero)
 
 1. System/PSU design minimum PWM (`MIN_PWM_LEVEL`, default 0 = run all 13)
 2. Final CSV naming (currently `fan_40_pct_4K_Random_Writes.csv`)

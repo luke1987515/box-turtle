@@ -215,7 +215,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdb
+	sda
 'Target type
 	DISK
 'End target
@@ -236,7 +236,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdc
+	sdb
 'Target type
 	DISK
 'End target
@@ -257,7 +257,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdd
+	sdc
 'Target type
 	DISK
 'End target
@@ -278,7 +278,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sde
+	sdd
 'Target type
 	DISK
 'End target
@@ -299,7 +299,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdf
+	sde
 'Target type
 	DISK
 'End target
@@ -320,7 +320,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdg
+	sdf
 'Target type
 	DISK
 'End target
@@ -341,7 +341,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdh
+	sdg
 'Target type
 	DISK
 'End target
@@ -362,7 +362,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdi
+	sdh
 'Target type
 	DISK
 'End target
@@ -383,7 +383,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdj
+	sdi
 'Target type
 	DISK
 'End target
@@ -404,7 +404,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdk
+	sdj
 'Target type
 	DISK
 'End target
@@ -425,7 +425,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdl
+	sdk
 'Target type
 	DISK
 'End target
@@ -446,7 +446,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdm
+	sdl
 'Target type
 	DISK
 'End target
@@ -467,7 +467,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdn
+	sdm
 'Target type
 	DISK
 'End target
@@ -488,7 +488,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdo
+	sdn
 'Target type
 	DISK
 'End target
@@ -509,7 +509,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdp
+	sdo
 'Target type
 	DISK
 'End target
@@ -530,7 +530,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdq
+	sdp
 'Target type
 	DISK
 'End target
@@ -551,7 +551,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdr
+	sdq
 'Target type
 	DISK
 'End target
@@ -572,7 +572,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sds
+	sdr
 'Target type
 	DISK
 'End target
@@ -593,7 +593,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdt
+	sds
 'Target type
 	DISK
 'End target
@@ -614,7 +614,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdu
+	sdt
 'Target type
 	DISK
 'End target
@@ -635,7 +635,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdv
+	sdu
 'Target type
 	DISK
 'End target
@@ -656,7 +656,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdw
+	sdv
 'Target type
 	DISK
 'End target
@@ -677,7 +677,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdx
+	sdw
 'Target type
 	DISK
 'End target
@@ -698,7 +698,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdy
+	sdx
 'Target type
 	DISK
 'End target

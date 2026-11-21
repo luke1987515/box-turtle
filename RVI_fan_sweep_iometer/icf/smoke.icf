@@ -215,7 +215,7 @@ Version 1.1.0
 'End assigned access specs
 'Target assignments
 'Target
-	sdb
+	sda
 'Target type
 	DISK
 'End target

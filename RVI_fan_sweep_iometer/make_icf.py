@@ -5,13 +5,14 @@
 # ICF = plain text (verified against a real file saved by IOMeter 1.1.0 GUI and
 # against the 1.1.0 source: Worker::SaveConfig, PageSetup, ManagerList).
 #
-# Customer RVI spec (test plan, sheet "Rotation Vibration", Appendix A):
+# Pega RVI spec ("Pegatron_Reliability RV Test Plan.xlsx", sheet "Rotation
+# Vibration", Appendix A):
 #   Profile 4K : 4KB block, 100% random, 100% writes, QD8, 30s ramp, 2min run
 #   Profile SEQ: 256KB block, 100% sequential, 100% writes, QD8, 30s ramp, 2min
 #
 # Topology: manager 'rvi-dut' @ 127.0.0.1 (dynamo running locally on the DUT,
 # launched with: dynamo -n rvi-dut -i 127.0.0.1 -m 127.0.0.1). One DISK worker
-# per drive; each worker gets exactly one target (sdb..sdy) and exactly one
+# per drive; each worker gets exactly one target (sda..sdx) and exactly one
 # access spec (the profile spec). This yields per-disk IOPS in the CSV.
 #
 # Usage:
@@ -33,7 +34,7 @@ SPEC_4K = "4 KiB aligned; 0% Read; 100% random"   # 4096,100,0,100,0,1,4096,0
 SPEC_SEQ = "256 KiB; 0% Read; 0% random"          # 262144,100,0,0,0,1,0,0
 
 DISKS_ABC = [f"sd{c}" for c in "bcdefghijklmnopqrstuvwxyz"]
-# DUT: sdb..sdy (24 drives, verified /proc/partitions 2026-11-18)
+# DUT XE1-2MS00-08: sdb..sdy (24 drives, verified /proc/partitions 2026-11-18)
 DEFAULT_DISKS = DISKS_ABC[:24]
 
 MANAGER_NAME = "rvi-dut"
