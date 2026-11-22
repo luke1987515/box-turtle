@@ -1,0 +1,693 @@
+{
+ "name": "AIC DQA Functional Test Item Catalog",
+ "version": "1.0",
+ "generated": "2026-11-22",
+ "source": {
+  "corpus": "dqa-report / Functional Report (456 PDFs: SSG 342, ESG 51, PSG 51, PPLM 11, IAG 1)",
+  "mined_item_instances": 6236,
+  "mined_distinct_items": 303
+ },
+ "curation": {
+  "kept_items": 73,
+  "skeletons": 7,
+  "variants_absorbed": 59,
+  "merged_names": 16,
+  "noise_dropped": 153,
+  "carried_from_2023_superset": 31
+ },
+ "items": [
+  {
+   "name": "EDFB",
+   "chapter": "1. Add BMC support",
+   "type": "skeleton",
+   "reports": 2,
+   "params": [
+    "firmware_versions"
+   ],
+   "variants": [
+    "EDFB on 2070.22 2077.162259.49",
+    "EDFB on 2000.10 2077.16 2100.23"
+   ]
+  },
+  {
+   "name": "WebUI",
+   "chapter": "3. BMC Function Test",
+   "type": "item",
+   "reports": 37,
+   "merged_from": []
+  },
+  {
+   "name": "BackPlane Phy",
+   "chapter": "3. Functional Test",
+   "type": "item",
+   "reports": 29,
+   "merged_from": []
+  },
+  {
+   "name": "NTB",
+   "chapter": "3. Functional Test",
+   "type": "item",
+   "reports": 2,
+   "merged_from": []
+  },
+  {
+   "name": "Consoleport",
+   "chapter": "3. Functionality Test",
+   "type": "item",
+   "reports": 2,
+   "merged_from": []
+  },
+  {
+   "name": "PowerModule",
+   "chapter": "3. Functionality Test",
+   "type": "item",
+   "reports": 2,
+   "merged_from": []
+  },
+  {
+   "name": "SPF+ Port",
+   "chapter": "3. Functionality Test",
+   "type": "item",
+   "reports": 1,
+   "merged_from": []
+  },
+  {
+   "name": "USB Port",
+   "chapter": "3. Functionality Test",
+   "type": "item",
+   "reports": 2,
+   "merged_from": []
+  },
+  {
+   "name": "AC/DC Power cycling",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 160,
+   "merged_from": []
+  },
+  {
+   "name": "AT Switch test: by front power SW",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 132,
+   "merged_from": []
+  },
+  {
+   "name": "AT Switch test: by power cord",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 111,
+   "merged_from": []
+  },
+  {
+   "name": "Burn-in Test",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 224,
+   "merged_from": []
+  },
+  {
+   "name": "Check_wide_port on /off /standby",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 152,
+   "merged_from": []
+  },
+  {
+   "name": "Customer requirement",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 58,
+   "merged_from": [
+    "Customer requirement (SES page 8Eh)",
+    "Customer requirement (SES page 95h)",
+    "Customer requirement (SES page 96h)",
+    "Customer requirement (SES page with “actual speed code”)",
+    "Customer requirement (Chassis Front Panel “Disable Power Button”)",
+    "Customer requirement ( MFGs without zoning sync – check default)",
+    "Customer requirement ( MFGs without zoning sync – change setting)",
+    "Customer requirement ( MFGs without zoning sync – after DC cycle)",
+    "Customer requirement ( MFGs without zoning sync – after AC loss)",
+    "Customer requirement (WWN)",
+    "Customized Request"
+   ]
+  },
+  {
+   "name": "DD command stress JBOD",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 143,
+   "merged_from": []
+  },
+  {
+   "name": "Enclosure Power-off",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 42,
+   "merged_from": []
+  },
+  {
+   "name": "Expander",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 176,
+   "merged_from": []
+  },
+  {
+   "name": "Expander Wide port LED",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 22,
+   "merged_from": []
+  },
+  {
+   "name": "Expander hot-swap",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 173,
+   "merged_from": []
+  },
+  {
+   "name": "External 8644 Hot-swap",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 167,
+   "merged_from": []
+  },
+  {
+   "name": "External 8674 Hot-swap",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 13,
+   "merged_from": []
+  },
+  {
+   "name": "Firmware Upgrade",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 188,
+   "merged_from": []
+  },
+  {
+   "name": "Front Panel",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 71,
+   "merged_from": []
+  },
+  {
+   "name": "HDD Hot-swap",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 191,
+   "merged_from": []
+  },
+  {
+   "name": "JBOD Cascade",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 133,
+   "merged_from": []
+  },
+  {
+   "name": "JBOD Remote",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 126,
+   "merged_from": []
+  },
+  {
+   "name": "LED Function",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 117,
+   "merged_from": []
+  },
+  {
+   "name": "MPIO",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 191,
+   "merged_from": []
+  },
+  {
+   "name": "Manually PWM",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 141,
+   "merged_from": []
+  },
+  {
+   "name": "Mute Button",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 135,
+   "merged_from": []
+  },
+  {
+   "name": "Redundant Power Module",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 149,
+   "merged_from": []
+  },
+  {
+   "name": "SAS Zoning",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 157,
+   "merged_from": []
+  },
+  {
+   "name": "SES Lighting Signal",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 210,
+   "merged_from": []
+  },
+  {
+   "name": "SES page 2 Element Status",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 17,
+   "merged_from": []
+  },
+  {
+   "name": "SES page2 Element Status",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 35,
+   "merged_from": []
+  },
+  {
+   "name": "Shake Test",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 172,
+   "merged_from": []
+  },
+  {
+   "name": "System Fan",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 170,
+   "merged_from": []
+  },
+  {
+   "name": "Temperature Sensor",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 189,
+   "merged_from": []
+  },
+  {
+   "name": "Vendor and Product name",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "Zone count",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 5,
+   "merged_from": []
+  },
+  {
+   "name": "diag_drive_led",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 158,
+   "merged_from": []
+  },
+  {
+   "name": "eHBA Card with <card> <interface> HDD Config",
+   "chapter": "3. JBOD Functional Test",
+   "type": "skeleton",
+   "reports": 6,
+   "params": [
+    "card",
+    "interface"
+   ],
+   "variants": [
+    "\"eHBA Card\" with SAS 24G HDD Config",
+    "\"eHBA Card\" with SAS 12G HDD Config"
+   ]
+  },
+  {
+   "name": "enclosure addr",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 156,
+   "merged_from": []
+  },
+  {
+   "name": "sas_standby_timer",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 95,
+   "merged_from": []
+  },
+  {
+   "name": "sensor",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 187,
+   "merged_from": []
+  },
+  {
+   "name": "serial number and enclosure number",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 80,
+   "merged_from": []
+  },
+  {
+   "name": "standby_timer",
+   "chapter": "3. JBOD Functional Test",
+   "type": "item",
+   "reports": 71,
+   "merged_from": []
+  },
+  {
+   "name": "1G Lan",
+   "chapter": "3. JBOF Functional Test",
+   "type": "item",
+   "reports": 4,
+   "merged_from": [
+    "1G Lan ( stingary only )"
+   ]
+  },
+  {
+   "name": "BackPlane NVMe",
+   "chapter": "3. JBOF Functional Test",
+   "type": "item",
+   "reports": 4,
+   "merged_from": []
+  },
+  {
+   "name": "DD command stress JBOF",
+   "chapter": "3. JBOF Functional Test",
+   "type": "item",
+   "reports": 2,
+   "merged_from": []
+  },
+  {
+   "name": "NVMe SSD LED",
+   "chapter": "3. JBOF Functional Test",
+   "type": "item",
+   "reports": 5,
+   "merged_from": []
+  },
+  {
+   "name": "NVMe SSD hot-swap",
+   "chapter": "3. JBOF Functional Test",
+   "type": "item",
+   "reports": 5,
+   "merged_from": [
+    "SSD Hot-swap"
+   ]
+  },
+  {
+   "name": "Node hot-swap",
+   "chapter": "3. JBOF Functional Test",
+   "type": "item",
+   "reports": 4,
+   "merged_from": [
+    "Node hot-swap ( Stingray only )"
+   ]
+  },
+  {
+   "name": "Button and LED Function",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 1,
+   "merged_from": []
+  },
+  {
+   "name": "Chassis Intruded",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 1,
+   "merged_from": []
+  },
+  {
+   "name": "DD command stress SYSTEM",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 13,
+   "merged_from": []
+  },
+  {
+   "name": "Expander on Board",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 31,
+   "merged_from": []
+  },
+  {
+   "name": "LAN Card Test",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 1,
+   "merged_from": [
+    "LAN Port The LAN function canwork properly.",
+    "RJ45 Port"
+   ]
+  },
+  {
+   "name": "Onboard IOC with <interface> HDD Config",
+   "chapter": "3. System Functional Test",
+   "type": "skeleton",
+   "reports": 6,
+   "params": [
+    "interface"
+   ],
+   "variants": [
+    "Onboard IOC ,SAS 12G HDD Config",
+    "Onboard IOC ,SAS 6G HDD Config"
+   ]
+  },
+  {
+   "name": "Reset Button",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 1,
+   "merged_from": []
+  },
+  {
+   "name": "Slot order in OS",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 20,
+   "merged_from": []
+  },
+  {
+   "name": "System Power",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 1,
+   "merged_from": []
+  },
+  {
+   "name": "System Stress",
+   "chapter": "3. System Functional Test",
+   "type": "skeleton",
+   "reports": 6,
+   "merged_from": [],
+   "params": [
+    "OS"
+   ],
+   "variants": [
+    "System Stress-Windows",
+    "System Stress-Linux"
+   ]
+  },
+  {
+   "name": "UART commands",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 1,
+   "merged_from": []
+  },
+  {
+   "name": "fancount",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 18,
+   "merged_from": []
+  },
+  {
+   "name": "sasaddr",
+   "chapter": "3. System Functional Test",
+   "type": "item",
+   "reports": 1,
+   "merged_from": []
+  },
+  {
+   "name": "Feature",
+   "chapter": "4. BMC Function Test",
+   "type": "skeleton",
+   "reports": 83,
+   "merged_from": [],
+   "params": [
+    "code base"
+   ],
+   "variants": [
+    "Feature (by RR12 code base)",
+    "Feature (by RR6 code base)"
+   ]
+  },
+  {
+   "name": "RAID Card with <card> <interface> HDD Config",
+   "chapter": "4. RAID Card Test",
+   "type": "skeleton",
+   "reports": 428,
+   "params": [
+    "card",
+    "interface"
+   ],
+   "variants": [
+    "\"RAID Card\" with SAS 12G HDD Config",
+    "\"RAID Card\" with SAS 6G HDD config",
+    "\"RAID Card\" with SATA 6G HDD config",
+    "Adaptec 3154-8i8e with SAS 12G HDD config",
+    "AVAGO 9380-4i4e with SAS 12G HDD config",
+    "AVAGO 9300-16e with SAS 12G HDD Config",
+    "Avago 9280-16i4e with SAS 6G HDD config",
+    "Avago 9280-16i4e with SATA 6G HDD config",
+    "LSI 9206-16e with SAS 12G HDD Config",
+    "AVAGO 9380-4i4e with SAS 6G HDD config",
+    "AVAGO 9380-4i4e with SATA 6G HDD config",
+    "AVAGO 9300-16e with SAS 6G HDD Config",
+    "AVAGO 9300-16e with SATA 6G HDD Config",
+    "LSI  9280-24i4e with SAS 12G HDD config",
+    "AVAGO 9206-16e with SAS 12G HDD Config",
+    "Avago 9280-16i4e with SAS 12G HDD config",
+    "LSI 9280-24i4e with SAS 6G HDD config",
+    "LSI 9280-24i4e with SATA 6G HDD config",
+    "AVAGO 9300-4i4e with SAS 6G HDD Config",
+    "AVAGO 9300-4i4e with SATA 6G HDD Config",
+    "AVAGO 9300-4i4e with SAS 12G HDD Config",
+    "Adaptec 8885 with SAS 12G HDD config",
+    "LSI 9300-16e with SAS 12G HDD Config",
+    "LSI 9300-16e with SAS 6G HDD Config",
+    "LSI 9300-16e with SATA 6G HDD Config",
+    "AVAGO 9361-4i with SAS 12G HDD config",
+    "Microsemi3154",
+    "Adaptec 3154-8i8e",
+    "AVAGO 9361-8i",
+    "9380-4i4e with SAS 12G HDD Config",
+    "LSI  9260-4i with SAS 12G HDD config",
+    "LSI 9300-4i4e with SAS 12G HDD Config",
+    "LSI 9207-8e with SAS 12G HDD Config"
+   ]
+  },
+  {
+   "name": "Dashboard function check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "FRU & PSU info check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "HDD Management function check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "Login Page function check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "Logs & Reports function check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "Maintenance function check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "Remote Control function check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "Sensor function check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "Setting function check",
+   "chapter": "5. BMC Functional Test",
+   "type": "item",
+   "reports": 3,
+   "merged_from": []
+  },
+  {
+   "name": "HBA Card with <card> <interface> HDD Config",
+   "chapter": "5. HBA Card Test",
+   "type": "skeleton",
+   "reports": 421,
+   "params": [
+    "card",
+    "interface"
+   ],
+   "variants": [
+    "\"HBA Card\" with SAS 12G HDD Config",
+    "\"HBA Card\" with SAS 6G HDD Config",
+    "\"HBA Card\" with SATA 6G HDD Config",
+    "AVAGO 9206-16e with SATA 6G HDD Config",
+    "AVAGO 9206-16e with SAS 6G HDD Config",
+    "LSI 9206-16e with SAS 6G HDD Config",
+    "LSI 9206-16e with SATA 6G HDD Config",
+    "AVAGO 9207-8e with SAS 12G HDD Config",
+    "AVAGO 9207-8e with SAS 6G HDD Config",
+    "AVAGO 9207-8e with SATA 6G HDD Config",
+    "9300-4i with SAS 12G HDD Config",
+    "9300-4i with SAS 6G HDD Config",
+    "9300-4i with SATA 6G HDD Config",
+    "9207-8e with SAS 12G HDD Config",
+    "9207-8e with SAS 6G HDD Config",
+    "9207-8e with SATA 6G HDD Config"
+   ]
+  },
+  {
+   "name": "Unsupported Feature",
+   "chapter": "5. HBA Card Test",
+   "type": "item",
+   "reports": 22,
+   "merged_from": []
+  },
+  {
+   "name": "Redfish",
+   "chapter": "6. BMC Function Test",
+   "type": "item",
+   "reports": 68,
+   "merged_from": []
+  }
+ ]
+}
