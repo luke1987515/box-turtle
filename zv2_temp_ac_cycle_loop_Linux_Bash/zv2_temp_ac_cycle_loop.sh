@@ -375,11 +375,23 @@ EOF
 bootstrap_ssh() {
     log "===== SSH bootstrap：金鑰對＋DUT 免密授權 ====="
     ensure_local_key || { log "FAIL: 本機 SSH 金鑰建立失敗（ssh-keygen）"; return 1; }
-    local host attempt pass ok
-    for host in "${NETWORK_HOSTS[@]}"; do
+    local host attempt pass ok i ip
+    for i in 0 1; do
+        host="${NETWORK_HOSTS[$i]}"
         if os_try_key "$host"; then
             log "SSH $host: 已免密，跳過"
             continue
+        fi
+        # IP 可能跑掉（DHCP 重新分配）：先 MAC 探測找新 IP（只讀 who-has，~15s），再試新 IP
+        if ip="$(mac_probe "${OS_MACS[$i]}")" && [ "$ip" != "$host" ]; then
+            log "IP DRIFT (bootstrap): node$((i+1)) OS $host → $ip（MAC ${OS_MACS[$i]}）— 用新 IP 重試"
+            NETWORK_HOSTS[$i]="$ip"
+            host="$ip"
+            save_drift_state
+            if os_try_key "$host"; then
+                log "SSH $host: 已免密，跳過"
+                continue
+            fi
         fi
         if install_pubkey "$host" "$DUT_PASS" && os_try_key "$host"; then
             log "SSH $host: 公鑰安裝成功（DUT_PASS），免密驗證 OK"
@@ -435,24 +447,34 @@ sel_max_id() {
 # 必須在記第一個 mark（M0）之前執行（先清、再記 mark）；
 # 絕不在 M2 前重清（會洗掉低溫段 SEL）。
 SEL_PRETEST_CLEARED=0
+declare -A SEL_CLEARED_OK=()   # pretest clear 成功的 BMC：M0=0x0000 為定義（免讀 mark）
 clear_sel_pretest() {
     [ "$SEL_PRETEST_CLEARED" -eq 1 ] && return
     local ip out
     for ip in "${BMC_HOSTS[@]}"; do
         if out=$(ipmitool -I lanplus -H "$ip" -U "$BMC_USER" -P "$BMC_PASS" sel clear 2>&1); then
             log "SEL pretest clear $ip: OK${out:+ ($out)}"
+            SEL_CLEARED_OK[$ip]=1
         else
             log "WARN: SEL pretest clear $ip 失敗（${out:-無訊息}）—— 測試前舊歷史可能混入本場 log"
         fi
     done
-    sleep 5   # 等 clear 完成 erase（否則 M0 mark 讀取必失敗，fallback 全量 dump）
+    sleep 5   # 等 clear 完成 erase（BMC 立即回傳，實際抹除非同步）
     SEL_PRETEST_CLEARED=1
 }
 
 # 記錄分界 mark：$1=M0（測試開始）| M2（高溫段開始）
+# M0 特例：pretest clear 成功的機器 SEL 剛被清光——讀「最大 record ID」必失敗
+# （擦除未完成／SEL 尚無新紀錄；11/16、11/23 皆中）。clear 後 M0=0x0000 為定義
+#（所有 record 皆屬本場），直接設值免讀。clear 失敗才讀舊 max ID 當分界。
 record_mark() {
     local tag="$1" ip v
     for ip in "${BMC_HOSTS[@]}"; do
+        if [ "$tag" = M0 ] && [ "${SEL_CLEARED_OK[$ip]:-0}" = 1 ]; then
+            SEL_START[$ip]="0x0000"
+            log "SEL mark(M0) $ip: 0x0000（pretest clear OK — clear 後所有 record 屬本場）"
+            continue
+        fi
         if v="$(sel_max_id "$ip")"; then
             if [ "$tag" = M0 ]; then SEL_START[$ip]="$v"; else SEL_HIGH_START[$ip]="$v"; fi
             log "SEL mark($tag) $ip: 目前最大 record ID $v"
