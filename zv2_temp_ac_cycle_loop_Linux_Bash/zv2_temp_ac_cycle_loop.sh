@@ -8,7 +8,7 @@
 #   1. 跑 cycle 1..LOW_CYCLES（開關循環 + PCIe/NVMe + SDR 記錄）
 #   2. 保持 AC ON → 等 TEMP_Sys_Inlet ≥ 35°C（chamber 高溫段 35°C）
 #   3. 跑 cycle 1..HIGH_CYCLES（編號重新從 1 起）
-#   4. 收尾：AC ON → 抓 SEL（依 record ID 分段：low 檔=低溫段、high 檔=高溫段）→ AC OFF
+#   4. 收尾：AC ON → 抓 SEL（依 record ID 分段：low 檔=低溫段、high 檔=高溫段）→ 終態 END_AC（預設 on = 保持 AC ON 供看機；off = AC OFF）
 #
 # 單段測試：
 #   LOW_CYCLES=0 → 跳過階段 0/1，直接進階段 2（等高溫）
@@ -46,15 +46,21 @@
 #
 # 用法：./zv2_temp_ac_cycle_loop.sh [低溫段輪數] [高溫段輪數]   # DEGRADED_MODE=off 可禁用降級模式
 #   預設 300 300
+#   ./zv2_temp_ac_cycle_loop.sh probe [MAC|IP]   # 只讀 who-has 探測（不碰 relay、不進測試）
 
 set -uo pipefail
 
 # ── 參數 ──────────────────────────────────────────────
 LOW_CYCLES="${1:-300}"
 HIGH_CYCLES="${2:-300}"
-TOTAL_CYCLES=$((LOW_CYCLES + HIGH_CYCLES))
+# probe 模式的參數是 MAC/IP（非數字）：只在兩者皆數字時做運算（probe 在主流程前就 exit）
+if [[ "$LOW_CYCLES" =~ ^[0-9]+$ ]] && [[ "$HIGH_CYCLES" =~ ^[0-9]+$ ]]; then
+    TOTAL_CYCLES=$((LOW_CYCLES + HIGH_CYCLES))
+else
+    TOTAL_CYCLES=0
+fi
 
-LOW_TEMP=10          # 低溫等待門檻（入風口讀值）
+LOW_TEMP=28          # 低溫等待門檻（入風口讀值）
 HIGH_TEMP=35         # 高溫等待門檻（入風口讀值；含 ~4°C 自熱偏差，見討論）
 WARN_TEMP=50         # 警告門檻
 CRIT_TEMP=55         # 保護門檻（AC OFF + 中止整場）
@@ -68,13 +74,34 @@ PING_RETRY_SECS=30
 MAX_PING_RETRIES=40          # 網路等待上限 20 分鐘
 AC_OFF_DELAY_SECS=60         # AC OFF 後等待放電
 DEGRADED_MODE="${DEGRADED_MODE:-on}"  # on = BMC 下線時 per-machine 降級判定；off = 舊行為
+END_AC="${END_AC:-on}"               # 收尾終態：on = 保持 AC ON 供看機（DUT 自啟）；off = 舊行為 AC OFF
 OS_BOOT_DEADLINE_SECS=300    # DEGRADED 時等 OS ping 通上限（實測 596 輪 max 216s + margin）
 OS_CPU_WARN=85               # OS 端備援溫度 WARN 門檻（CPU °C，暫定值；DUT 上電後依 sensors 調整）
 OS_CPU_CRIT=95               # OS 端備援溫度 PROTECT 門檻（≥ 即 AC OFF + 中止整場）
 KCS_TIMEOUT_SECS=30          # KCS 救援 SDR 的 timeout
 
-NETWORK_HOSTS=("192.168.11.82" "192.168.11.85")
-BMC_HOSTS=("192.168.11.222" "192.168.11.234")
+NETWORK_HOSTS=("192.168.15.111" "192.168.15.110")
+BMC_HOSTS=("192.168.15.97" "192.168.15.96")
+
+# ── IP 跑掉自愈（MAC 探測 fallback）────────────────────
+# DHCP 跑掉時舊 IP 永遠 ping 不通：ping 失敗達門檻 → who-has 全段找目標 MAC
+# → 找到新 IP 就重綁 NETWORK_HOSTS[idx] 並寫狀態檔（下次開跑直接吃新 IP）。
+OS_MACS=("00:15:b2:b3:38:cd" "00:15:b2:b3:38:d0")  # node1/node2 OS NIC MAC（換硬體才改）
+SWEEP_NET="192.168.15"         # who-has 掃的段（v1 只 15.x）
+DRIFT_PROBE_AT=10              # 主 wait（30s 間隔）：第 N 次 ping 失敗時探測，2N 再探一次
+DRIFT_EARLY_PROBE_AT=30        # degraded wait（5s 間隔）：第 N 次失敗時探測，2N 再探一次
+DRIFT_STATE_FILE="${DRIFT_STATE_FILE:-/root/luke/.zv2_os_ip_map}"
+DRIFT_PROBED=(0 0)             # 本輪各機已探測次數（run_cycle 每輪重設）
+# 開跑載入上場 IP 覆蓋（自癒：若新 IP 又不通，本場會再探測修正）
+if [ -f "$DRIFT_STATE_FILE" ]; then
+    while IFS='=' read -r _dk _dv; do
+        case "$_dk" in
+            OS_IP_0) NETWORK_HOSTS[0]="$_dv";;
+            OS_IP_1) NETWORK_HOSTS[1]="$_dv";;
+        esac
+    done < "$DRIFT_STATE_FILE"
+    echo "[drift] 載入上場 IP 覆蓋：node1=${NETWORK_HOSTS[0]} node2=${NETWORK_HOSTS[1]}（$DRIFT_STATE_FILE）"
+fi
 # AC 電源 helper（021/022 呼叫相對路徑的 lxRW_x64，必須在該目錄內執行）
 AC_HELPER_DIR="${AC_HELPER_DIR:-/ED/QT_Cycling_Multi-SVR-AC}"
 
@@ -109,6 +136,9 @@ CYCLE=0
 FAIL_COUNT=0
 DEGRADED_COUNT=0       # 台次：BMC 下線但走 OS 路徑（有跑 OS 腳本）
 POWER_FAIL_COUNT=0     # 台次：relay ON 但 BMC/OS 皆不可達（供電鏈嫌疑）
+SDR_OK_COUNT=0         # 台次：拿到 BMC SDR（normal lanplus 或 degraded KCS 救援）
+HWMON_ONLY_COUNT=0     # 台次：無 SDR、只有 OS hwmon 備援（BMC 全死）
+NO_DATA_COUNT=0        # 台次：無 SDR 且無 hwmon（powerfail / 全掛）
 WATCHDOG_PID=""
 
 # ── 基本工具 ──────────────────────────────────────────
@@ -415,6 +445,7 @@ clear_sel_pretest() {
             log "WARN: SEL pretest clear $ip 失敗（${out:-無訊息}）—— 測試前舊歷史可能混入本場 log"
         fi
     done
+    sleep 5   # 等 clear 完成 erase（否則 M0 mark 讀取必失敗，fallback 全量 dump）
     SEL_PRETEST_CLEARED=1
 }
 
@@ -508,11 +539,76 @@ dump_sel() {
 }
 
 # ── Degraded mode 函式（DEGRADED_MODE=on 時才走；off 時完全不呼叫）────────
-# 等單一 DUT OS ping 通（deadline 秒）；成功回 0
+# ── IP drift 探測（ping 不通時按 MAC 找新 IP；只讀 who-has，不碰 relay）────
+# 掃 SWEEP_NET 全段（並行 who-has），輸出所有 "IP MAC" 行
+sweep_online() {
+    local iface i net
+    net="${SWEEP_NET%.0}"      # 容許帶尾 .0（"192.168.15" 與 "192.168.15.0" 皆對）
+    iface="$(ip route get "${net}.2" 2>/dev/null | grep -oE 'dev [^ ]+' | awk '{print $2}' | head -1)"
+    [ -n "$iface" ] || iface="enp1s0f0"   # 94 預設
+    for i in $(seq 1 254); do
+        echo "${net}.$i"
+    done | xargs -P 32 -I{} arping -I "$iface" -c 1 -w 1 {} 2>/dev/null \
+        | grep -a 'Unicast reply' \
+        | awk '{ ip=$4; mac=$5; gsub(/[\[\]]/,"",mac); if (mac != "") print ip, tolower(mac) }' \
+        | sort -u
+}
+
+# 找目標 MAC 的 IP（stdout）；找不到回 1
+mac_probe() {
+    local target="${1,,}" hit
+    hit="$(sweep_online | awk -v m="$target" '$2==m {print $1; exit}')"
+    if [ -n "$hit" ]; then printf '%s\n' "$hit"; return 0; fi
+    return 1
+}
+
+# ping 失敗達門檻時探測；找到新 IP → 重綁 + 持久化。每輪最多探 2 次。
+# 用法：maybe_probe_drift <idx> <已失敗次數> <門檻 N>
+maybe_probe_drift() {
+    local idx="$1" fails="$2" at="$3" cur mac ip n
+    [ "$idx" -ge 0 ] && [ "$idx" -lt 2 ] || return 0
+    [ "$fails" -ge "$at" ] || return 0
+    n=$((fails / at))
+    [ "$n" -lt 1 ] && return 0
+    [ $((fails % at)) -ne 0 ] && return 0
+    [ "${DRIFT_PROBED[$idx]:-0}" -ge 2 ] && return 0
+    DRIFT_PROBED[idx]=$(( ${DRIFT_PROBED[$idx]:-0} + 1 ))
+    cur="${NETWORK_HOSTS[idx]}"
+    mac="${OS_MACS[idx]}"
+    log "  [drift] ${cur} ping 失敗 $fails 次 → who-has 探測（MAC $mac、段 $SWEEP_NET，~20s）"
+    if ip="$(mac_probe "$mac")"; then
+        if [ "$ip" = "$cur" ]; then
+            log "  [drift] MAC 仍在 ${cur}（非 IP 跑掉；可能是 NIC/OS 未起）"
+            return 0
+        fi
+        log "IP DRIFT: node$((idx+1)) OS ${cur} → ${ip}（MAC $mac）— 重綁繼續等待"
+        NETWORK_HOSTS[idx]="$ip"
+        save_drift_state
+        return 0
+    fi
+    log "  [drift] MAC $mac 在 $SWEEP_NET 找不到 — 若 BMC 亦不可達才屬 POWER-FAIL（供電鏈/NIC 嫌疑）"
+    return 1
+}
+
+save_drift_state() {
+    if {
+        echo "OS_IP_0=${NETWORK_HOSTS[0]}"
+        echo "OS_IP_1=${NETWORK_HOSTS[1]}"
+    } > "$DRIFT_STATE_FILE" 2>/dev/null; then
+        log "  [drift] 狀態檔已更新：$DRIFT_STATE_FILE"
+    else
+        log "WARN: [drift] 寫 $DRIFT_STATE_FILE 失敗（本場仍用重綁後的 IP）"
+    fi
+}
+
+# 等單一 DUT OS ping 通（deadline 秒）；成功回 0。idx = NETWORK_HOSTS 下標
+# （drift 探測可能重綁 IP，每圈重新讀值；舊呼叫端傳 IP 字串的寫法已廢）
 wait_os_ping() {
-    local host="$1" deadline="$2" i
+    local idx="$1" deadline="$2" host i
     for i in $(seq 1 $((deadline / 5))); do
+        host="${NETWORK_HOSTS[idx]}"
         ping -c 1 -W 2 "$host" >/dev/null 2>&1 && return 0
+        maybe_probe_drift "$idx" "$i" "$DRIFT_EARLY_PROBE_AT"
         sleep 5
     done
     return 1
@@ -552,15 +648,21 @@ kcs_sdr() {
 }
 
 # SDR 缺失標記（KCS 也失敗）＋ OS 端 hwmon 輸出當備援
+# 回 0 = hwmon 備援資料已寫入 log（計 HWMON_ONLY）；回 1 = 連 hwmon 都拿不到（計 NO_DATA）
 sdr_missing() {
-    local host="$1"
+    local host="$1" hw
     section "cycle $CYCLE BMC SDR MISSING $host"
     log "SDR MISSING: $host（BMC 不可達且 KCS 失敗，本輪 SDR 缺失）"
-    ssh -i "$OS_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    hw="$(ssh -i "$OS_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o BatchMode=yes -o ConnectTimeout=10 "$OS_USER@$host" \
         'sensors 2>/dev/null; for p in /sys/class/hwmon/hwmon*; do
             [ -d "$p" ] && { echo "== $p"; for t in "$p"/temp*_label "$p"/temp*_input; do [ -e "$t" ] && echo "$t: $(cat "$t" 2>/dev/null)"; done; };
-         done' >> "$(cur_log)" 2>&1 || true
+         done' 2>/dev/null)"
+    if [ -n "$hw" ]; then
+        printf '%s\n' "$hw" | sed 's/^/  /' >> "$(cur_log)"
+        return 0
+    fi
+    log "FAIL: $host OS hwmon 亦無輸出（本輪該機無任何溫度資料）"
     return 1
 }
 
@@ -597,16 +699,19 @@ cleanup_degraded_watchers() {
     return 0
 }
 
-# 等單一 DUT OS 網路通（舊 wait_for_hosts 的單機版）
+# 等單一 DUT OS 網路通（舊 wait_for_hosts 的單機版）。idx = NETWORK_HOSTS 下標
+# （drift 探測可能重綁 IP，每圈重新讀值；舊呼叫端傳 IP 字串的寫法已廢）
 wait_for_hosts_one() {
-    local i host="$1"
+    local i idx="$1" host
     for i in $(seq 1 "$MAX_PING_RETRIES"); do
         check_abort
+        host="${NETWORK_HOSTS[idx]}"
         ping -c 1 -W 2 "$host" >/dev/null 2>&1 && return 0
         log "  $host 不可達，${PING_RETRY_SECS}s 後重試 ($i/$MAX_PING_RETRIES)"
+        maybe_probe_drift "$idx" "$i" "$DRIFT_PROBE_AT"
         sleep "$PING_RETRY_SECS"
     done
-    log "FAIL: $host 開機後 $((MAX_PING_RETRIES * PING_RETRY_SECS / 60)) 分鐘仍未連通"
+    log "FAIL: ${NETWORK_HOSTS[idx]} 開機後 $((MAX_PING_RETRIES * PING_RETRY_SECS / 60)) 分鐘仍未連通"
     return 1
 }
 
@@ -626,7 +731,8 @@ run_degraded() {
             continue
         fi
         log "DEGRADED: cycle $CYCLE $bmc BMC 不可達 → 試 OS 路徑（$host）"
-        if wait_os_ping "$host" "$OS_BOOT_DEADLINE_SECS"; then
+        if wait_os_ping "$i" "$OS_BOOT_DEADLINE_SECS"; then
+            host="${NETWORK_HOSTS[$i]}"   # drift 探測可能已重綁 IP
             MACHINE_STATE[$i]="degraded"
             DEGRADED_COUNT=$((DEGRADED_COUNT + 1))
             if kcs_probe "$host"; then
@@ -642,7 +748,7 @@ run_degraded() {
         else
             MACHINE_STATE[$i]="powerfail"
             POWER_FAIL_COUNT=$((POWER_FAIL_COUNT + 1))
-            log "POWER-FAIL: cycle $CYCLE $host relay ON 但 BMC/OS 皆不可達（BMC 逾時 + OS ${OS_BOOT_DEADLINE_SECS}s）— 供電鏈嫌疑（relay 接點 / PSU）"
+            log "POWER-FAIL: cycle $CYCLE ${NETWORK_HOSTS[$i]} relay ON 但 BMC/OS 皆不可達（BMC 逾時 + OS ${OS_BOOT_DEADLINE_SECS}s）— MAC 探測結果見上方 [drift] log：找不到 = 供電鏈（relay 接點/PSU）/NIC 嫌疑；找到但不可達 = 網路嫌疑"
         fi
     done
     any_power=0
@@ -655,6 +761,9 @@ run_degraded() {
 # 單一循環；回傳 2 = 中止
 run_cycle() {
     local i ip t all_up
+    DRIFT_PROBED=(0 0)   # 每輪重設：上輪重綁後若 IP 又跑掉，本輪要能再探
+    MACHINE_STATE=()     # 每輪重設：清空再重新判定（BMC 復回的輪次不能沿用舊 degraded 值）
+    SDR_SOURCE=()
     log "──────── cycle $CYCLE / $TOTAL_CYCLES ────────"
 
     if ! ac_on; then
@@ -696,7 +805,7 @@ run_cycle() {
     all_up=1
     for i in 0 1; do
         [ "${MACHINE_STATE[$i]:-normal}" = normal ] || continue
-        wait_for_hosts_one "${NETWORK_HOSTS[$i]}" || all_up=0
+        wait_for_hosts_one "$i" || all_up=0
     done
     if [ "$all_up" -ne 1 ]; then
         FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -716,21 +825,39 @@ run_cycle() {
         esac
     done
     # SDR：normal 走 lanplus；degraded 走 KCS 或標 MISSING
+    # 每機台次計入資料效力：SDR_OK / HWMON_ONLY / NO_DATA
     for i in 0 1; do
         case "${MACHINE_STATE[$i]:-normal}" in
             normal)
-                dump_sdr "${BMC_HOSTS[$i]}" || FAIL_COUNT=$((FAIL_COUNT + 1))
+                if dump_sdr "${BMC_HOSTS[$i]}"; then
+                    SDR_OK_COUNT=$((SDR_OK_COUNT + 1))
+                else
+                    NO_DATA_COUNT=$((NO_DATA_COUNT + 1))
+                    FAIL_COUNT=$((FAIL_COUNT + 1))
+                fi
                 ;;
             degraded)
                 case "${SDR_SOURCE[$i]:-missing}" in
                     kcs)
-                        kcs_sdr "${NETWORK_HOSTS[$i]}" || FAIL_COUNT=$((FAIL_COUNT + 1))
+                        if kcs_sdr "${NETWORK_HOSTS[$i]}"; then
+                            SDR_OK_COUNT=$((SDR_OK_COUNT + 1))
+                        else
+                            NO_DATA_COUNT=$((NO_DATA_COUNT + 1))
+                            FAIL_COUNT=$((FAIL_COUNT + 1))
+                        fi
                         ;;
                     *)
-                        sdr_missing "${NETWORK_HOSTS[$i]}"
+                        if sdr_missing "${NETWORK_HOSTS[$i]}"; then
+                            HWMON_ONLY_COUNT=$((HWMON_ONLY_COUNT + 1))
+                        else
+                            NO_DATA_COUNT=$((NO_DATA_COUNT + 1))
+                        fi
                         FAIL_COUNT=$((FAIL_COUNT + 1))
                         ;;
                 esac
+                ;;
+            powerfail)
+                NO_DATA_COUNT=$((NO_DATA_COUNT + 1))
                 ;;
         esac
     done
@@ -742,6 +869,30 @@ run_cycle() {
 }
 
 # ── 主流程 ────────────────────────────────────────────
+
+# probe 模式：只讀 who-has 探測（不碰 relay、不進測試）
+#   probe <MAC> → 找 IP + 印全段在線表；probe <IP> → 反向查 MAC
+if [ "${1:-}" = "probe" ]; then
+    _ptgt="${2:-}"
+    [ -n "$_ptgt" ] || { echo "用法：$0 probe <MAC|IP>"; exit 1; }
+    _piface="$(ip route get "${SWEEP_NET}.2" 2>/dev/null | grep -oE 'dev [^ ]+' | awk '{print $2}' | head -1)"
+    [ -n "$_piface" ] || _piface="enp1s0f0"
+    _t0=$SECONDS
+    if [[ "$_ptgt" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        echo "── IP → MAC: ${_ptgt}（段 ${SWEEP_NET}、iface ${_piface}）──"
+        arping -I "$_piface" -c 3 -w 2 "$_ptgt" 2>/dev/null | grep -a 'Unicast reply' || echo "（無回應）"
+    else
+        _psweep="$(sweep_online)"
+        _pip="$(printf '%s\n' "$_psweep" | awk -v m="${_ptgt,,}" '$2==m {print $1; exit}')"
+        echo "── MAC → IP: ${_ptgt}（段 ${SWEEP_NET}、iface ${_piface}）──"
+        if [ -n "$_pip" ]; then echo "FOUND: ${_ptgt} = ${_pip}"; else echo "NOT FOUND: ${_ptgt}（段 ${SWEEP_NET}）"; fi
+        echo "── 全段在線表（${SWEEP_NET}）──"
+        printf '%s\n' "$_psweep"
+    fi
+    echo "（耗時 $((SECONDS - _t0))s）"
+    exit 0
+fi
+
 [ "$TOTAL_CYCLES" -gt 0 ] || { echo "錯誤：LOW_CYCLES + HIGH_CYCLES 必須 > 0"; exit 1; }
 
 log "開始：低溫段 $LOW_CYCLES 輪 + 高溫段 $HIGH_CYCLES 輪"
@@ -802,7 +953,7 @@ else
     log "===== 跳過高溫段（HIGH_CYCLES=0），直接進入收尾 ====="
 fi
 
-# 收尾：抓 SEL 並最終關機
+# 收尾：抓 SEL，再依 END_AC 決定終態（on 預設：保持 AC ON 供看機；off：舊行為 AC OFF）
 log "===== 收尾：抓 SEL ====="
 ac_on
 if wait_bmc_ready; then
@@ -812,8 +963,12 @@ if wait_bmc_ready; then
 else
     log "FAIL: 收尾 BMC 未上線，無法抓 SEL"
 fi
-ac_off
+if [ "$END_AC" = off ]; then
+    ac_off
+else
+    log "保持 AC ON（END_AC=on）：DUT 將自啟（Power Restore Policy always-on），測試人員可直接看機箱狀態"
+fi
 
 kill "$WATCHDOG_PID" 2>/dev/null
 rm -rf "$WORK_DIR"
-log "END — 完成 $TOTAL_CYCLES 輪（DEGRADED $DEGRADED_COUNT 台次 / POWER-FAIL $POWER_FAIL_COUNT 台次），累計 $FAIL_COUNT 次步驟失敗（PROTECT/WARN 事件請查 log 與 SEL）"
+log "END — 完成 $TOTAL_CYCLES 輪（DEGRADED $DEGRADED_COUNT 台次 / POWER-FAIL $POWER_FAIL_COUNT 台次），SDR 資料效力：SDR $SDR_OK_COUNT / 僅OS-hwmon $HWMON_ONLY_COUNT / 無資料 $NO_DATA_COUNT（合計 $((SDR_OK_COUNT + HWMON_ONLY_COUNT + NO_DATA_COUNT)) 台次），累計 $FAIL_COUNT 次步驟失敗（PROTECT/WARN 事件請查 log 與 SEL）"
