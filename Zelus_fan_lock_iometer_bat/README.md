@@ -1,5 +1,7 @@
 # Server Fan-Speed Lock + IOMeter Auto Test (Windows bat) — ZELUS / Sophos (Pegatron 2MS)
 
+> English version (this file) | 繁體中文版本：[README.zh-TW.md](README.zh-TW.md)
+
 Windows batch automation for the DQA "fan speed lock + IOMeter" test:
 sweeps 13 chassis-fan PWM levels (20 → 100%) and at each level locks the
 chassis fans (OEM `raw 0x36 0xFA`), runs **both** IOMeter profiles
@@ -49,6 +51,7 @@ Worked example: reply `6c 30` → `val = 0x306C = 12396` →
 | `run_fan_iometer_V03.bat` | main test (interactive: asks BMC IP/user/password) |
 | `psu_fan_test.bat` | 30 s read-only check of the PSU fan read only (no fan lock, no IOMeter) |
 | `README.md` | this file |
+| `README.zh-TW.md` | Chinese (Traditional) version of this README |
 
 ## Requirements (all in the same folder)
 
